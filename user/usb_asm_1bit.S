@@ -397,7 +397,6 @@ done_data:
 
 	bgei a4, 4, dont_do_zero_crc
 	movi a5, 0xffff
-	_s32i.n a4, a14, 4; //DEbug!!!
 dont_do_zero_crc:
 
 	//Make more data.
@@ -413,12 +412,34 @@ dont_do_zero_crc:
 actually_done:
 
 
+
 	addi a15, a15, 53
 emit_data_bit_for_starting_end:
 	rsr a0, ccount
 	sub a0, a0, a15
 	bbsi a0, 31, emit_data_bit_for_starting_end
 
+	//Super tricky: If we have to bit stuff the last bit, do it here.
+	//http://www.ti.com/lit/an/spraat5a/spraat5a.pdf 7.1.9
+	blti a6, 6, done_bit_stuff
+		movi a0, -1
+		xor a7, a0, a7
+
+		bbsi a7, 0, is_high_usr_data_bit_stuff
+			_s32i.n a9, a11, GPIO_OFFSET_OUT
+			j skip_high_usr_data_bit_stuff
+			is_high_usr_data_bit_stuff:
+				_s32i.n a8, a11, GPIO_OFFSET_OUT
+			skip_high_usr_data_bit_stuff:	
+
+		addi a15, a15, 53
+		emit_data_bit_for_starting_end_bit_stuff:
+			rsr a0, ccount
+			sub a0, a0, a15
+			bbsi a0, 31, emit_data_bit_for_starting_end_bit_stuff
+
+
+	done_bit_stuff:
 
 	//Go low/low for two cycles.
 	movi a0, (3<<DMINUSBASE)

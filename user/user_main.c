@@ -145,8 +145,9 @@ void user_init(void)
     PIN_DIR_OUTPUT = _BV(5);
 	PIN_OUT_SET = _BV(5);
 
-	ets_delay_us(200000);
-	uart0_sendStr("\r\n\033cesp8266 ws2812 driver\r\n");
+	//ets_delay_us(200000);
+	//uart0_sendStr("\r\n\033c" );
+	uart0_sendStr("esp8266 usb driver\r\n");
 	system_update_cpu_freq( 80 );
 //#define PROFILE
 #ifdef PROFILE

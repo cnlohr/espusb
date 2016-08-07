@@ -34,7 +34,6 @@ int SendData( uint8_t * buffer, int len )
 			buffer, 
 			len,     //wLength  (more like max length)
 			1000 );
-		printf( "%d %c%c\n", r1, buffer[0], buffer[1] );
 	}
 	else
 	{
@@ -64,7 +63,7 @@ int PushMatch( const char * match )
 			if( r2 < 0 ) continue;
 
 			recvline[r2] = 0;
-			printf( "%d\n", r2 );
+
 			if( strncmp( recvline, match, strlen( match ) ) == 0 ) //XXX? Should this be memcmp?
 			{
 				return 0;
@@ -89,11 +88,8 @@ int PushMatch( const char * match )
 			{
 	//			tbuf = recvline;
 				int n=recvfrom(sockfd,recvline,10000,0,NULL,NULL);
-	//			printf( "!!%d ->%s\n", n,recvline );
-	//			printf( "%s === %s\n", recvline, match );
 				if( strncmp( recvline, match, strlen( match ) ) == 0 )
 				{
-	//				printf( "Ok\n" ); fflush( stdout );
 					return 0;
 				}
 			}

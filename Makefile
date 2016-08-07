@@ -88,6 +88,10 @@ IP?=192.168.4.1
 netburn : image.elf $(FW_FILES)
 	web/execute_reflash $(IP) image.elf-0x00000.bin image.elf-0x40000.bin
 
+usbburn : image.elf $(FW_FILES)
+	web/execute_reflash USB image.elf-0x00000.bin image.elf-0x40000.bin
+
+
 clean :
 	rm -rf user/*.o driver/*.o $(TARGET_OUT) $(FW_FILE_1) $(FW_FILE_2)
 
