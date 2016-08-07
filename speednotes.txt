@@ -1,0 +1,195 @@
+
+
+
+
+THIS DISCUSSION SHOWS WHEN YOU ARE JUMPiNG ONTO SOMETHING WITH 11 as last TWO bits, it takes ONE EXTRA CYCLE TO DO JUMP.
+
+7876:
+40100351:	05e207        	bbsi	a2, 0, 4010035a <skipper>
+40100354:	f03d      	nop.n
+40100356:	f03d      	nop.n
+40100358:	f03d      	nop.n
+4010035a <skipper>:
+
+7900:
+40100351:	06e207        	bbsi	a2, 0, 4010035b <skipper>
+40100354:	0020f0        	nop
+40100357:	f03d      	nop.n
+40100359:	f03d      	nop.n
+
+4010035b <skipper>:
+
+7876:
+40100351:	07e207        	bbsi	a2, 0, 4010035c <skipper>
+40100354:	0020f0        	nop
+40100357:	0020f0        	nop
+4010035a:	f03d      	nop.n
+4010035c <skipper>:
+
+7876:
+40100351:	08e207        	bbsi	a2, 0, 4010035d <skipper>
+40100354:	0020f0        	nop
+40100357:	0020f0        	nop
+4010035a:	0020f0        	nop
+4010035d <skipper>:
+
+
+//////////////////////////////Let's try shifting them.
+
+7876:
+40100350:	05e207        	bbsi	a2, 0, 40100359 <skipper>
+40100353:	f03d      	nop.n
+40100355:	f03d      	nop.n
+40100357:	f03d      	nop.n
+40100359 <skipper>:
+
+7876
+4010034f:	05e207        	bbsi	a2, 0, 40100358 <skipper>
+40100352:	f03d      	nop.n
+40100354:	f03d      	nop.n
+40100356:	f03d      	nop.n
+40100358 <skipper>:
+
+7900
+4010034e:	05e207        	bbsi	a2, 0, 40100357 <skipper>
+40100351:	f03d      	nop.n
+40100353:	f03d      	nop.n
+40100355:	f03d      	nop.n
+40100357 <skipper>:
+
+7876:
+4010034d:	05e207        	bbsi	a2, 0, 40100356 <skipper>
+40100350:	f03d      	nop.n
+40100352:	f03d      	nop.n
+40100354:	f03d      	nop.n
+40100356 <skipper>:
+
+7876:
+4010034c:	05e207        	bbsi	a2, 0, 40100355 <skipper>
+4010034f:	f03d      	nop.n
+40100351:	f03d      	nop.n
+40100353:	f03d      	nop.n
+40100355 <skipper>:
+
+7876:
+4010034b:	05e207        	bbsi	a2, 0, 40100354 <skipper>
+4010034e:	f03d      	nop.n
+40100350:	f03d      	nop.n
+40100352:	f03d      	nop.n
+40100354 <skipper>:
+
+7900:
+4010034a:	05e207        	bbsi	a2, 0, 40100353 <skipper>
+4010034d:	f03d      	nop.n
+4010034f:	f03d      	nop.n
+40100351:	f03d      	nop.n
+40100353 <skipper>:
+
+76:
+40100353:	05e207        	bbsi	a2, 0, 4010035c <skipper>
+40100356:	f03d      	nop.n
+40100358:	f03d      	nop.n
+4010035a:	f03d      	nop.n
+4010035c <skipper>:
+
+75:
+40100351:	05e207        	bbsi	a2, 0, 4010035a <skipper>
+40100354:	f03d      	nop.n
+40100356:	f03d      	nop.n
+40100358:	f03d      	nop.n
+4010035a <skipper>:
+4010035a:	1cd9      	s32i.n	a13, a12, 4
+
+76:
+40100350:	05e207        	bbsi	a2, 0, 40100359 <skipper>
+40100353:	f03d      	nop.n
+40100355:	f03d      	nop.n
+40100357:	f03d      	nop.n
+40100359 <skipper>:
+
+75:
+4010034f:	05e207        	bbsi	a2, 0, 40100358 <skipper>
+40100352:	f03d      	nop.n
+40100354:	f03d      	nop.n
+40100356:	f03d      	nop.n
+40100358 <skipper>:
+
+ON SPOT:
+4010034e:	05e207        	bbsi	a2, 0, 40100357 <skipper>
+40100351:	f03d      	nop.n
+40100353:	f03d      	nop.n
+40100355:	f03d      	nop.n
+40100357 <skipper>:
+
+
+////////////Let's try different sizes.
+
+OFF:
+40100358:	06e207        	bbsi	a2, 0, 40100362 <skipper>
+4010035b:	0020f0        	nop
+4010035e:	f03d      	nop.n
+40100360:	f03d      	nop.n
+40100362 <skipper>:
+
+
+SPOT ON:
+40100359:	06e207        	bbsi	a2, 0, 40100363 <skipper>
+4010035c:	0020f0        	nop
+4010035f:	f03d      	nop.n
+40100361:	f03d      	nop.n
+40100363 <skipper>:
+
+OFF:
+4010035a:	06e207        	bbsi	a2, 0, 40100364 <skipper>
+4010035d:	0020f0        	nop
+40100360:	f03d      	nop.n
+40100362:	f03d      	nop.n
+40100364 <skipper>:
+
+OFF:
+4010035b:	06e207        	bbsi	a2, 0, 40100365 <skipper>
+4010035e:	0020f0        	nop
+40100361:	f03d      	nop.n
+40100363:	f03d      	nop.n
+40100365 <skipper>:
+
+
+/////////////Next size:
+
+SPOT ON:
+40100358:	07e207        	bbsi	a2, 0, 40100363 <skipper>
+4010035b:	0020f0        	nop
+4010035e:	0020f0        	nop
+40100361:	f03d      	nop.n
+40100363 <skipper>:
+
+OFF:
+40100359:	07e207        	bbsi	a2, 0, 40100364 <skipper>
+4010035c:	0020f0        	nop
+4010035f:	0020f0        	nop
+40100362:	f03d      	nop.n
+      64:
+
+OFF:
+4010035a:	07e207        	bbsi	a2, 0, 40100365 <skipper>
+4010035d:	0020f0        	nop
+40100360:	0020f0        	nop
+40100363:	f03d      	nop.n
+40100365 <skipper>:
+
+OFF:
+4010035b:	07e207        	bbsi	a2, 0, 40100366 <skipper>
+4010035e:	0020f0        	nop
+40100361:	0020f0        	nop
+40100364:	f03d      	nop.n
+40100366 <skipper>:
+
+ON:
+4010035c:	07e207        	bbsi	a2, 0, 40100367 <skipper>
+4010035f:	0020f0        	nop
+40100362:	0020f0        	nop
+40100365:	f03d      	nop.n
+40100367 <skipper>:
+
+
+

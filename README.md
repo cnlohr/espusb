@@ -1,2 +1,5 @@
-# espusb
-Software-only ESP8266 USB Device
+#ESP8266 USB Software Driver
+
+...
+
+TODO: Write me.

@@ -1,0 +1,455 @@
+
+//ESP8266 instruction timing guide:
+//
+// nop : 1
+// add, addi, or, extui : 2 (Sort of)
+// movi: 1
+// l32r: 7 (Sort of)
+// l32i.n: 1 (Seems to be always)
+//
+// 1 Clock cycle:
+//		add.n	a10, a10, a11
+//
+// 2 Clock Cycles:
+//		add.n	a10, a10, a11
+//		add.n	a10, a10, a11
+//
+// 2 Clock Cycles:
+//		add.n	a10, a10, a11
+//		extui	a10, a10, 24, 3
+//
+// 7 Clocks:
+//		l32r	a10, 4010027c <_DoubleExceptionVector+0x20c>
+//
+// Also 7 Clocks:
+//		addi.n	a10, a10, -1
+//	    l32r	a10, 4010027c <_DoubleExceptionVector+0x20c>
+//
+// 9 Clocks:
+//		addi.n	a10, a10, -1
+//		addi.n	a11, a11, -1
+//		l32r	a11, 4010027c <_DoubleExceptionVector+0x20c>
+//
+// 14 Clocks
+//		l32r	a10, 4010027c <_DoubleExceptionVector+0x20c>
+//		l32r	a11, 40100280 <_DoubleExceptionVector+0x210>
+//
+// 1 Clocks
+//     	l32i.n	a10, a2, 0
+//
+// 2 Clocks 
+//		add.n	a10, a10, a11
+//		l32i.n	a10, a2, 0
+//
+// 3 Clocks (Second operation depends on first)
+//		l32i.n	a10, a2, 0
+//        (Nop or no nop, still 3 cycles)
+//		add.n	a10, a10, a11
+//
+//
+//	2 Clocks  (Second operation does not depend on first)
+//		l32i.n	a10, a2, 0
+//		add.n	a11, a11, a11
+//
+//  3 Clocks (@a2 == 0)  (Branch not taken)
+//		l32i.n	a10, a2, 0
+//		nop.n
+//		bgeui	a10, 5, 40100b60 <end>
+//
+//  5 Clocks (@a2 == 6)  (Branch taken)  Branching takes 2 additional instructions
+//		l32i.n	a10, a2, 0
+//		nop.n
+//		bgeui	a10, 5, 40100b60 <end>
+//
+//
+//  3 Clocks
+//		j	end
+//		...
+//		end:
+//
+//  4 Clocks: (Branch not taken)
+//		l32i	a10, a2, 0
+//		bgeui	a10, 6, 40100b58 <end>
+//		addi	a10, a10, 1
+//
+//	4 Clocks: (Branch not taken)
+//		l32i	a10, a2, 0
+//		extui	a10, a10, 23, 1
+//	   	bgeui	a10, 6, 40100b58 <end>
+//
+//  6 Clocks: (Branch Taken)
+//		l32i	a10, a2, 0
+//			(Free to do unrelated instruction here)
+//		extui	a10, a10, 1, 4
+//		bgeui	a10, 6, 40100b58 <end>
+//
+//
+// Function Calls:
+//
+//
+//  5 Clocks: No function call.
+//		nop.n
+//		nop.n
+//		j	40100b58 <end>
+//	my_func:
+//		ret.n
+//	end:
+//
+// 10 Clocks: Include function call
+//		call0	40100b54 <my_func>
+//		j	40100b56 <end>
+//	<my_func>:
+//      ret.n
+//  end:
+//
+// 10 Clocks: Include function call, and an instruction in the beginning
+//        	call0	40100b54 <my_func>
+//        	j	40100b58 <end>
+// <my_func>:
+//      	nop.n
+//      	ret.n
+// <end>:
+//
+// 12 Clocks:   (WHYYYYYYY WHY Jump from 10 to 12??)
+// <intrs>:
+//        	call0	40100b54 <my_func>
+//        	j	40100b5a <end>
+// <my_func>:
+//      	nop.n
+//      	nop.n
+//      	ret.n
+//
+// 13 Clocks:
+//<intrs>:
+//        	call0	40100b54 <my_func>
+//        	j	40100b5e <end>
+// <my_func>:
+//        	addi	a1, a1, -16
+//      	nop.n
+//        	addi	a1, a1, 16
+//      	ret.n
+//
+// 15 Clocks:
+// <intrs>:
+//		call0	40100b54 <my_func>
+//        	j	40100b62 <end>
+// <my_func>:
+//        	addi	a1, a1, -16
+//      	s32i.n	a0, a1, 0
+//      	nop.n
+//      	l32i.n	a0, a1, 0
+//        	addi	a1, a1, 16
+//      	ret.n
+// <end>:
+//
+//
+// 21 Clocks:
+// <intrs>:
+//        	call0	40100b54 <my_func>
+//        	j	40100b6e <end>
+// <my_func>:
+//        	addi	a1, a1, -16
+//      	s32i.n	a0, a1, 0
+//      	s32i.n	a2, a1, 4
+//      	s32i.n	a3, a1, 8
+//      	s32i.n	a4, a1, 12
+//      	nop.n
+//      	l32i.n	a4, a1, 12
+//      	l32i.n	a3, a1, 8
+//      	l32i.n	a2, a1, 4
+//      	l32i.n	a0, a1, 0
+//        	addi	a1, a1, 16
+//      	ret.n
+// <end>:
+//
+// For the following, we will be replacing 'nop' with the following:
+//
+// This takes 1 clock...
+//      nop
+//
+// These take 20 Clocks... WHYYYY?Y??YY?
+//		l32r	a2, 40100280 <_DoubleExceptionVector+0x210> (These are actually movi a2, (some constant))
+//	   	l32r	a3, 40100270 <_DoubleExceptionVector+0x200>  
+//     	l32r	a4, 40100284 <_DoubleExceptionVector+0x214>
+//
+// 14 Clocks:
+//        	l32r	a2, 40100280 <_DoubleExceptionVector+0x210>
+//        	l32r	a3, 40100270 <_DoubleExceptionVector+0x200>
+//
+// 7 Clocks:
+//        	l32r	a3, 40100270 <_DoubleExceptionVector+0x200>
+//
+// These take 25 Clocks... Ok... this is getting weird.
+//		l32r	a0, 40100280 <_DoubleExceptionVector+0x210> (These are actually movi a2, (some constant))
+//		l32r	a2, 40100280 <_DoubleExceptionVector+0x210> 
+//	   	l32r	a3, 40100270 <_DoubleExceptionVector+0x200>  
+//     	l32r	a4, 40100284 <_DoubleExceptionVector+0x214>
+//
+// 33 Clock... WAT??
+//        	l32r	a0, 40100280 <_DoubleExceptionVector+0x210>
+//        	l32r	a2, 40100280 <_DoubleExceptionVector+0x210>
+//        	l32r	a4, 40100280 <_DoubleExceptionVector+0x210>
+//        	l32r	a0, 40100280 <_DoubleExceptionVector+0x210>
+//        	l32r	a2, 40100280 <_DoubleExceptionVector+0x210>
+//
+// 9 Clocks:  (If you want to cleaverly pull data out of a table)
+//        	l32r	a0, 40100160 <_DoubleExceptionVector+0xf0>
+//			(ONE Optional nop here)
+//      	sskipper32i.n	a1, a0, 0
+//
+//
+//  BIG NOTE About jumping.  If the instruction you are jumping to ends in a 11 as the last two bits, it will take ONE extra cycle to complete.
+//     JUMPS TAKE ONE EXTRA CYCLE WHEN 11 is last two bits: CONFIRMED.  This lets us place 3 instructions in and it will still take just as long!
+//
+// Whenever reading with any kind of load, the next instruction CANNOT use the data that was loaded.
+
+//
+//  mul16u a, b, c  <<1 cycle, always.
+//
+//
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#if 0
+
+
+//NOTES: We are hooked up to USB by GPIO12: D-? (White), GPIO14: D-, GPIO5 EXTDEBUG
+
+#define STDPLUS "12"
+#define STDMINUS "14"
+
+#define GPSET   __asm__ __volatile__ ("movi    a2, 0x60000304\nmovi    a4, 0x60000308\nmovi.n  a3, 32\n");  //GPIO5
+#define LOW 	__asm__ __volatile__ ("s32i.n  a3, a4, 0");  //One instruction.
+#define HIGH    __asm__ __volatile__ ("s32i.n  a3, a2, 0");
+
+#define LOWS 	__asm__ __volatile__ ("s32i.n  a14, a13, 0":::"a3");
+#define HIGHS   __asm__ __volatile__ ("s32i.n  a14, a12, 0":::"a3");
+
+//Detailed analysis of some useful stuff and performance tweaking: http://naberius.de/2015/05/14/esp8266-gpio-output-performance/
+//Reverse engineerd boot room can be helpful, too: http://cholla.mmto.org/esp8266/bootrom/boot.txt
+
+//The folowing performs this code:
+//   uint32_t gpio_status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
+//   GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, gpio_status);      //clear interrupt status
+//
+//GPIO Base Register(PERIPHS_GPIO_BASEADDR): 0x60000300 + GPIO Status Register: 0x1c = 0x6000031c
+//GPIO_STATUS_W1TC_ADDRESS  = 0x24
+#define ACKNOWLEDGE_INTERRUPT __asm__ __volatile__ ("movi    a2, 0x6000031c \n l32i.n a3, a2, 0 \n movi a2, 0x60000324 \n s32i.n a3, a2, 0");
+
+//    ETS_INTR_DISABLE(ETS_GPIO_INUM) ETS_GPIO_INUM=4, 
+//#define ETS_INTR_ENABLE(inum) \
+//    ets_isr_unmask((1<<inum))
+//#define ETS_INTR_DISABLE(inum) \
+//    ets_isr_mask((1<<inum))
+
+//These still aren't very fast. I am sure more can be done.
+#define FAST_ETS_INTR_DISABLE_GPIO _xtos_ints_off(1<<4);
+#define FAST_ETS_INTR_ENABLE_GPIO _xtos_ints_on(1<<4);
+
+/* Charles' useful assembly guide for the ESP:
+
+
+* don't jump if bit in register set: bbci	a2, 14, 40100379 <gpio_intr+0x11>
+*       jump if bit in register set: bbsi	a2, 14, 40100379 <gpio_intr+0x11>
+
+* movi    a2, 0x60000304 <  move the address of 
+* movi.n  a3, 4096 < set the value
+* s32i.n  a3, a4, 0 < Update it in memory
+*/
+
+//XXX Careful: Note the "int" to let things wrap.
+static inline int __attribute__((always_inline)) get_ccount(void) 
+{
+        unsigned r;
+        asm volatile ("rsr %0, ccount" : "=r"(r));
+        return r;
+}
+
+//static inline unsigned __attribute__((always_inline)) wait_bit() 
+#define wait_bit \
+{ \
+	bittime+=53; \
+  	while( bittime > get_ccount() ); \
+}
+	
+#define WBV (((*pins)&_BV(DPLUS))?1:0)
+
+
+//Plan of attack:  
+//1: Spin at beginning waiting for a bit transition.
+//2: Start "wait bit"ting every 53 cycles.
+
+
+#define TIMEOUT 0xff
+
+void gpio_intr(void)
+{
+	register unsigned to asm ("a9"); //timeout
+	register int bittime asm ("a10");
+	volatile register uint32_t * pins asm ("a11");
+
+	//Variables used for debugging.
+	volatile register uint32_t * pin_out_set asm ("a12");
+	volatile register uint32_t * pin_out_clr asm ("a13");
+	volatile register int psel asm("a14");
+
+	uint32_t bits[16];
+	unsigned i, j;
+
+//Initialize common-use variables
+__asm__ __volatile__("\n\
+	movi a11, "STR_PIN_IN"\n\
+	movi a12, "STR_PIN_OUT_SET"\n\
+	movi a13, "STR_PIN_OUT_CLEAR"\n\
+	movi a14, %0\n\
+" : : "M"(1<<DEBUGPIN) : "a11", "a12", "a13", "a14" );
+	FAST_ETS_INTR_DISABLE_GPIO;
+	HIGHS
+//#define SLOW_START
+
+#ifdef SLOW_START
+	//Wait for it to go low.
+	__asm__ __volatile__("mstart:\n" );
+
+	for( to = TIMEOUT; to; to-- )
+	{
+		if( !(PIN_IN & _BV(DPLUS)) ) break;
+	}
+	//Wait for it to go high.
+	for( to = TIMEOUT; to; to-- )
+	{
+		if( (PIN_IN & _BV(DPLUS)) ) break;
+	}
+	__asm__ __volatile__("mend:\n" );
+
+#else
+
+	//First, we wait for the signal to go (or be) low.  Then we wait for the signal to go high.
+	__asm__ __volatile__("\n\
+		movi a9, 1023 #timeout \n\
+find_low:\n\
+        l32i.n a2, a11, 0\n\
+		bbci a2, " STDPLUS ", done_low\n\
+		addi.n a9, a9, -1\n\
+		bnez a9, find_low\n\
+		j end_gpio_intr\n\
+done_low:\n\
+		movi a9, 1023 #timeout \n\
+find_high:\n\
+        l32i.n a2, a11, 0\n\
+		bbsi a2, " STDPLUS ", done_high\n\
+		addi.n a9, a9, -1\n\
+		bnez a9, find_high\n\
+		j end_gpio_intr\n\
+done_high:\n\
+" : : : "a2" );
+#endif
+	LOWS
+
+
+//	bittime = get_ccount() + 42 - 53;  //Each bit is 53 cycles, we are shooting for the middle of the coming bit, but give us back a few us..
+										//GCC Seems pretty smart, this actually translates to moving the value into r10 and adding some values.
+									//Scratch that.  GCC messes this up, too.
+	//This does effectively take a snapshot of the start of the tracking.
+	__asm__ __volatile("\n\
+		rsr a10, ccount\n\
+		addi a10, a10, -12\n\
+	");
+
+
+/*
+	//Code for assembly below.
+	//Wait for a double 0.
+	for( to = TIMEOUT; to; to-- )
+	{
+		HIGHS
+		wait_bit
+		LOWS
+		if( !(PIN_IN&_BV(DPLUS)) )
+		{
+			HIGHS
+			wait_bit
+			LOWS
+			if( !(PIN_IN&_BV(DPLUS)) ) break;
+		}
+	}
+*/
+	//Wait for a double-low bit.
+	//R10 contains when we should stop reading next.
+	__asm__ __volatile__("\n\
+		movi a9, 1023 #timeout \n\
+find_double_low:\n\
+        addi.n a9, a9, -1\n\
+		beqz a9, end_gpio_intr\n\
+		addi a10, a10, 53\n\
+\n\
+wait_double_loop_int:\n\
+		rsr a3, ccount\n\
+		bge a10, a3, wait_double_loop_int\n\
+		# Time to read another bit.\n\
+        l32i.n a3, a11, 0\n\
+		memw\n\
+		bbsi a3, " STDPLUS ", find_double_low\n\
+		# Got a 0!  Let's see if that happens again.\n\
+		addi a10, a10, 53\n\
+wait_double_loop_int2:\n\
+		rsr a3, ccount\n\
+		bge a10, a3, wait_double_loop_int2\n\
+		# Poll again.\n\
+        l32i.n a3, a11, 0\n\
+		memw\n\
+		bbsi a3, " STDPLUS ", find_double_low\n\
+" : : : "a3" );
+
+	//Ok!  We now can use wait_bit to wait for the next bit then receive using WBV.
+
+	for(i = 0; i < 16; i++ )
+	{
+		HIGHS
+		wait_bit
+		LOWS
+		bits[i] = WBV;
+//		GPSET; //Setup GPIO
+//		LOW;
+//		HIGH;
+
+	}
+
+	HIGHS
+/*
+	printf( "\n" );
+	for(i = 0; i < 16; i++ )
+	{
+		printf( "%d", bits[i] );
+	}
+	LOWS
+	printf( "\n" );*/
+
+
+	__asm__ __volatile__("end_gpio_intr:");
+
+	LOWS
+
+	ACKNOWLEDGE_INTERRUPT;
+
+	//ETS_GPIO_INTR_ENABLE();
+	FAST_ETS_INTR_ENABLE_GPIO;
+
+	//XT_CLI;
+}
+
+
+#endif
