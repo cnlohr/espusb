@@ -22,9 +22,9 @@ static const uint8_t device_descriptor[] = {
 	18, //Length
 	1,  //Type (Device)
 	0x10, 0x01, //Spec
-	0xff, //Device Class
-	0xff, //Device Subclass
-	0xff, //Device Protocol
+	0x0, //Device Class
+	0x0, //Device Subclass
+	0x0, //Device Protocol  (000 = use config descriptor)
 	0x08, //Max packet size for EP0 (This has to be 8 because of the USB Low-Speed Standard)
 	0xcd, 0xab, //ID Vendor
 	0x66, 0x82, //ID Product
@@ -35,7 +35,7 @@ static const uint8_t device_descriptor[] = {
 	1, //Max number of configurations
 };
 
-static const uint8_t config_descriptor[] = {
+static const uint8_t config_descriptor[] = {  //Mostly stolen from a USB mouse I found.
 	// configuration descriptor, USB spec 9.6.3, page 264-266, Table 9-10
 	9, 					// bLength;
 	2,					// bDescriptorType;
@@ -60,8 +60,18 @@ static const uint8_t config_descriptor[] = {
 	0x21,					// bDescriptorType (HID)
 	0x10, 0x01, 0x00, 0x01, 0x22, 0x48, 0x00,
 
-	7, 
+	7, //endpoint descriptor (For endpoint 1)
 	0x05, 0x81, 0x03, 0x04, 0x00, 0x0a,
+};
+
+
+
+static const uint8_t mouse_hid_desc[] = {  //Mostly stolen from a USB mouse I found.
+	0x05, 0x01, 0x09, 0x02, 0xa1, 0x01, 0x09, 0x01, 0xa1, 0x00, 0x05, 0x09, 0x19, 0x01, 0x29, 0x03,
+	0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x03, 0x81, 0x02, 0x75, 0x05, 0x95, 0x01, 0x81, 0x01,
+	0x05, 0x01, 0x09, 0x30, 0x09, 0x31, 0x09, 0x38, 0x15, 0x81, 0x25, 0x7f, 0x75, 0x08, 0x95, 0x03,
+	0x81, 0x06, 0xc0, 0x05, 0xff, 0x09, 0x02, 0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x01, 0xb1,
+	0x22, 0x75, 0x07, 0x95, 0x01, 0xb1, 0x01, 0xc0, 
 };
 
 #define STR_MANUFACTURER L"CNLohr"
@@ -105,7 +115,7 @@ const static struct descriptor_list_struct {
 } descriptor_list[] = {
 	{0x0100, 0x0000, device_descriptor, sizeof(device_descriptor)},
 	{0x0200, 0x0000, config_descriptor, sizeof(config_descriptor)},
-//	{0x2200, KEYBOARD_INTERFACE, keyboard_hid_report_desc, sizeof(keyboard_hid_report_desc)},
+	{0x2200, 0x0000, mouse_hid_desc, sizeof(mouse_hid_desc)},
 //	{0x2100, KEYBOARD_INTERFACE, config1_descriptor+KEYBOARD_HID_DESC_OFFSET, 9},
 	{0x0300, 0x0000, (const uint8_t *)&string0, 4},
 	{0x0301, 0x0409, (const uint8_t *)&string1, sizeof(STR_MANUFACTURER)},
@@ -114,6 +124,10 @@ const static struct descriptor_list_struct {
 };
 #define DESCRIPTOR_LIST_ENTRIES ((sizeof(descriptor_list))/(sizeof(struct descriptor_list_struct)) )
 
+
+
+uint8_t ep1data[4] = { 0x00, 0x00, 0x00, 0x00 };
+int     sendep1 = 0;
 
 
 void handle_setup( uint32_t this_token, struct usb_internal_state_struct * ist )
@@ -167,6 +181,27 @@ void PerpetuatePacket( struct usb_internal_state_struct * ist )
 
 void handle_in( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
+	uint8_t addr = (this_token>>8) & 0x7f;
+	uint8_t endp = (this_token>>15) & 0xf;
+
+	if( endp == 0x1 && addr == ist->my_address )
+	{
+		ist->debug = this_token;
+		if( sendep1 )
+		{
+			ist->usb_bufferout = ep1data;
+			ist->usb_bufferout_len = sizeof( ep1data );
+			sendep1 = 1;
+		}
+		else
+		{
+			uint8_t sendword[2] = { 0x80, 0xD2 };  //Empty data.
+			usb_send_data( sendword, 2, 2 );
+		}
+	}
+
+	//TODO: Need to handle saying "nah, we're good!" if we're good.
+	//00688a69
 	PerpetuatePacket( ist );
 }
 
@@ -202,29 +237,10 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 		ist->usb_bufferout = (uint8_t*)1;
 		ist->usb_bufferout_len = 0;
 
-		if( s->bmRequestType == 0x80 )
+		if( s->bmRequestType & 0x80 )
 		{
 			if( s->bRequest == 0x06 ) //Get Request
 			{
-/*				if( s->wValue == 0x0100 )
-				{
-					ist->usb_bufferout = g_device_descriptor;
-					ist->usb_bufferout_len = sizeof( g_device_descriptor );
-					if( s->wLength < ist->usb_bufferout_len ) ist->usb_bufferout_len = s->wLength;
-				}
-				else if( s->wValue == 0x0200 )
-				{
-					ist->debug = s->wLength;
-					ist->usb_bufferout = g_config_descriptor;
-					ist->usb_bufferout_len = sizeof( g_config_descriptor );//sizeof( g_config_descriptor );
-					if( s->wLength < ist->usb_bufferout_len ) ist->usb_bufferout_len = s->wLength;
-				}
-				else
-				{
-				}
-*/
-//					ist->debug = s->wValue | (s->wIndex<<16);
-
 				int i;
 				const struct descriptor_list_struct * dl;
 				for( i = 0; i < DESCRIPTOR_LIST_ENTRIES; i++ )
@@ -233,11 +249,10 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 					if( dl->wIndex == s->wIndex && dl->wValue == s->wValue )
 						break;
 				}
-				ist->debug = DESCRIPTOR_LIST_ENTRIES;
 
 				if( i == DESCRIPTOR_LIST_ENTRIES )
 				{
-					//??? Somehow fail?
+					//??? Somehow fail?  Is 'nak' the right thing? I don't know what to do here.
 					goto just_ack;
 				}
 
@@ -252,6 +267,10 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 			if( s->bRequest == 0x05 ) //Set address.
 			{
 				ist->my_address = s->wValue;
+			}
+			if( s->bRequest == 0x09 ) //Set configuration.
+			{
+				//s->wValue; has the index.  We don't really care about this.
 			}
 		}
 	}

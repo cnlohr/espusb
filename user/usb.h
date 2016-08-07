@@ -13,6 +13,9 @@
 #ifndef _INASM_
 #include <c_types.h>
 
+extern uint8_t ep1data[4];
+extern int     sendep1;
+
 struct usb_internal_state_struct
 {
 	uint8_t usb_buffer[USB_BUFFERSIZE];

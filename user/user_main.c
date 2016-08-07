@@ -60,6 +60,10 @@ static void ICACHE_FLASH_ATTR myTimer(void *arg)
 		printf( "%02x ", usb_internal_state.usb_buffer[i] );
 	printf( "\n" );
 	PIN_OUT_CLEAR = _BV(5);
+
+	ep1data[1] = 1;
+	sendep1 = 1;
+
 	CSTick( 1 );
 }
 
