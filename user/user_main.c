@@ -46,6 +46,23 @@ os_event_t    procTaskQueue[procTaskQueueLen];
 static void ICACHE_FLASH_ATTR procTask(os_event_t *events)
 {
 	CSTick( 0 );
+
+	usb_internal_state.ep1data[1] = 1;
+	usb_internal_state.sendep1 = 1;
+
+//	ets_memcpy( usb_internal_state.user_control_in, usb_internal_state.user_control_out, usb_internal_state.user_control_out_length );
+//	usb_internal_state.user_control_in_length = usb_internal_state.user_control_out_length;
+
+	if( usb_internal_state.user_control_length_acc )
+	{
+		//printf( "\nGot: %s\n", usb_internal_state.user_control );
+		int r = issue_command( usb_internal_state.user_control, sizeof( usb_internal_state.user_control )-1, usb_internal_state.user_control, usb_internal_state.user_control_length_acc );
+		usb_internal_state.user_control_length_acc = 0;
+		//printf( "%d/%s/%d\n", usb_internal_state.user_control_length_acc, usb_internal_state.user_control, r );
+		if( r >= 0 )
+			usb_internal_state.user_control_length_ret = r;
+	}
+
 	system_os_post(procTaskPrio, 0, 0 );
 }
 
@@ -55,14 +72,13 @@ extern uint32_t usb_ramtable[31] __attribute__((aligned(16)));
 static void ICACHE_FLASH_ATTR myTimer(void *arg)
 {
 	int i;
+#if 0
 	printf( ":%d (%08x) ++  (%08x)(%08x)\n", usb_internal_state.packet_size, usb_internal_state.packet_size, usb_internal_state.debug, usb_ramtable[1]  );
 	for( i = 0; i < 16; i++ )
 		printf( "%02x ", usb_internal_state.usb_buffer[i] );
 	printf( "\n" );
 	PIN_OUT_CLEAR = _BV(5);
-
-	ep1data[1] = 1;
-	sendep1 = 1;
+#endif
 
 	CSTick( 1 );
 }

@@ -13,28 +13,41 @@
 #ifndef _INASM_
 #include <c_types.h>
 
-extern uint8_t ep1data[4];
-extern int     sendep1;
-
 struct usb_internal_state_struct
 {
+	//This data is modified by the super low-level code.
+
 	uint8_t usb_buffer[USB_BUFFERSIZE];
 
-	//////////////NOOOOOPEEEE:::Bit 0: Expecting from host.  DATA0 = 0, DATA1 = 1
+	//Bit 0: Unused
 	//Bit 1: Next we sent to host. DATA0 = 0, DATA1 = 1
 	uint32_t usb_buffer_status;
-	uint32_t packet_size;
+	uint32_t packet_size; //Of data currently in usb_buffer
 	uint32_t last_token;
 	uint32_t debug;
+
+
 
 	//Things past here are addressable by C.
 
 	uint32_t my_address;
 	uint32_t setup_request; //1 if needing setup packet.
 
-	const uint8_t  * usb_bufferout;
-	uint32_t   usb_bufferout_len;
+	const uint8_t  * usb_bufferret;
+	uint32_t   usb_bufferret_len;
 	int last_sent_qty;
+
+	uint8_t ep1data[4];
+	int     sendep1;
+
+
+	//Awkward example with use of control messages to get data to/from device.
+	uint8_t * usb_bufferaccept;
+	uint32_t  accept_length;
+
+	uint8_t user_control[150];
+	int     user_control_length_acc; //From host to us.
+	int     user_control_length_ret; //From us to host.
 };
 
 extern struct usb_internal_state_struct usb_internal_state __attribute__((aligned(4)));

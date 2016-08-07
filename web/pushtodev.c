@@ -10,45 +10,103 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libusb-1.0/libusb.h>
+
+struct libusb_device_handle *devh = NULL;
 
 #define sector_SIZE 4096
 int sockfd;
 char recvline[10000];
 
+int use_usb = 0;
+int sendsize_max = 1024; //For USB it will be smaller
+struct sockaddr_in servaddr,cliaddr;
+
+int SendData( uint8_t * buffer, int len )
+{
+	if( use_usb )
+	{
+		int r1 = libusb_control_transfer( devh,
+			0x00,    //reqtype  (0x80 = Device->PC, 0x00 = PC->Device)
+			0xA6,    //request
+			0x0100,  //wValue
+			0x0000,  //wIndex
+			buffer, 
+			len,     //wLength  (more like max length)
+			1000 );
+		printf( "%d %c%c\n", r1, buffer[0], buffer[1] );
+	}
+	else
+	{
+		return sendto( sockfd, buffer, len, MSG_NOSIGNAL, (struct sockaddr *)&servaddr,sizeof(servaddr));
+	}
+}
+
 
 int PushMatch( const char * match )
 {
-	struct timeval tva, tvb;
-	gettimeofday( &tva, 0 );
-	gettimeofday( &tvb, 0 );
-	while( tvb.tv_sec - tva.tv_sec < 3 ) //3 second timeout.
+	if( use_usb )
 	{
-		struct pollfd ufds;
-		ufds.fd = sockfd;
-		ufds.events = POLLIN;
-		int rv = poll(&ufds, 1, 500);
-		if( rv > 0 )
+		int tries = 0;
+		for( tries = 0; tries < 10; tries++ )
 		{
-//			tbuf = recvline;
-			int n=recvfrom(sockfd,recvline,10000,0,NULL,NULL);
-//			printf( "!!%d ->%s\n", n,recvline );
-//			printf( "%s === %s\n", recvline, match );
-			if( strncmp( recvline, match, strlen( match ) ) == 0 )
+			usleep( 1000 );
+
+			int r2 = libusb_control_transfer( devh,
+				0x80,    //reqtype  (0x80 = in, 0x00 = out)
+				0xA7,    //request
+				0x0100,  //wValue
+				0x0000,  //wIndex
+				recvline, //wLength  (more like max length)
+				128,
+				1000 );
+
+			if( r2 < 0 ) continue;
+
+			recvline[r2] = 0;
+			printf( "%d\n", r2 );
+			if( strncmp( recvline, match, strlen( match ) ) == 0 ) //XXX? Should this be memcmp?
 			{
-//				printf( "Ok\n" ); fflush( stdout );
 				return 0;
 			}
+
+			usleep( 20000 );
 		}
-		gettimeofday( &tvb, 0 );
+		return 1;
 	}
-	return 1;
+	else
+	{
+		struct timeval tva, tvb;
+		gettimeofday( &tva, 0 );
+		gettimeofday( &tvb, 0 );
+		while( tvb.tv_sec - tva.tv_sec < 3 ) //3 second timeout.
+		{
+			struct pollfd ufds;
+			ufds.fd = sockfd;
+			ufds.events = POLLIN;
+			int rv = poll(&ufds, 1, 500);
+			if( rv > 0 )
+			{
+	//			tbuf = recvline;
+				int n=recvfrom(sockfd,recvline,10000,0,NULL,NULL);
+	//			printf( "!!%d ->%s\n", n,recvline );
+	//			printf( "%s === %s\n", recvline, match );
+				if( strncmp( recvline, match, strlen( match ) ) == 0 )
+				{
+	//				printf( "Ok\n" ); fflush( stdout );
+					return 0;
+				}
+			}
+			gettimeofday( &tvb, 0 );
+		}
+		return 1;
+	}
 }
 
 
 int main(int argc, char**argv)
 {
 	int n;
-	struct sockaddr_in servaddr,cliaddr;
 	char sendline[1000];
 //	char recvline[1000];
 
@@ -75,13 +133,45 @@ int main(int argc, char**argv)
 	}
 
 
+	if( strcmp( argv[1], "USB" ) == 0 )
+	{
+		int r;
+		use_usb = 1;
+		printf( "Connecting by USB\n" );
+		if( libusb_init(NULL) < 0 )
+		{
+			fprintf( stderr, "Error: Could not initialize libUSB\n" );
+			return -1;
+		}
 
-	sockfd=socket(AF_INET,SOCK_DGRAM,0);
 
-	bzero(&servaddr,sizeof(servaddr));
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_addr.s_addr=inet_addr(argv[1]);
-	servaddr.sin_port=htons(7878);
+		devh = libusb_open_device_with_vid_pid( NULL, 0xabcd, 0x8266 );
+		if( !devh )
+		{
+			fprintf( stderr,  "Error: Cannot find USB device.\n" );
+			return -1;
+		}
+
+		libusb_detach_kernel_driver( devh, 0 );
+
+		if( (r=libusb_claim_interface(devh, 0)) < 0 )
+		{
+			fprintf(stderr, "usb_claim_interface error %d\n", r);
+			return -1;
+		}
+		printf( "Connected.\n" );
+		//USB is attached
+		sendsize_max = 128;
+	}
+	else
+	{
+		sockfd=socket(AF_INET,SOCK_DGRAM,0);
+
+		bzero(&servaddr,sizeof(servaddr));
+		servaddr.sin_family = AF_INET;
+		servaddr.sin_addr.s_addr=inet_addr(argv[1]);
+		servaddr.sin_port=htons(7878);
+	}
 
 	int devo = 0;
 	int lastsector_block = -1;
@@ -93,7 +183,7 @@ int main(int argc, char**argv)
 		int thissuccess;
 		char buffer[1024];
 		char bufferout[1600];
-		int reads = fread( buffer, 1, 1024, f );
+		int reads = fread( buffer, 1, sendsize_max, f );
 		int sendplace = offset + devo;
 		int sendsize = reads;
 
@@ -109,7 +199,7 @@ int main(int argc, char**argv)
 			{
 				char match[75];
 				printf( "Erase: %d\n", sector );
-				sendto( sockfd, se, sel, MSG_NOSIGNAL, (struct sockaddr *)&servaddr,sizeof(servaddr));
+				SendData( se, sel );
 				sprintf( match, "FE%d", sector );
 
 				if( PushMatch(match) == 0 ) { thissuccess = 1; break; }
@@ -136,7 +226,7 @@ int main(int argc, char**argv)
 			{
 				char match[75];
 				printf( "Erase: %d\n", block );
-				sendto( sockfd, se, sel, MSG_NOSIGNAL, (struct sockaddr *)&servaddr,sizeof(servaddr));
+				SendData( se, sel );
 				sprintf( match, "FB%d", block );
 
 				if( PushMatch(match) == 0 ) { thissuccess = 1; break; }
@@ -162,8 +252,7 @@ resend:
 		for( tries = 0; tries < 10; tries++ )
 		{
 			char match[75];
-			sendto( sockfd, bufferout, reads + r, MSG_NOSIGNAL, (struct sockaddr *)&servaddr,sizeof(servaddr));
-
+			SendData( bufferout, reads + r );
 			sprintf( match, "FW%d", sendplace );
 
 			if( PushMatch(match) == 0 ) { thissuccess = 1; break; }

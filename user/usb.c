@@ -61,7 +61,11 @@ static const uint8_t config_descriptor[] = {  //Mostly stolen from a USB mouse I
 	0x10, 0x01, 0x00, 0x01, 0x22, 0x48, 0x00,
 
 	7, //endpoint descriptor (For endpoint 1)
-	0x05, 0x81, 0x03, 0x04, 0x00, 0x0a,
+	0x05, //Endpoint Descriptor (Must be 5)
+	0x81, //Endpoint Address
+	0x03, //Attributes
+	0x04,	0x00, //Size
+	0x0a, //Interval (Was 0x0a)
 };
 
 
@@ -126,17 +130,15 @@ const static struct descriptor_list_struct {
 
 
 
-uint8_t ep1data[4] = { 0x00, 0x00, 0x00, 0x00 };
-int     sendep1 = 0;
-
-
 void handle_setup( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
 	ist->usb_buffer_status = 2;
 	ist->setup_request = 1;
 
 	//XXX TODO: Check device_address against address in this token.
-	
+
+	//If we get an "setup" token, we have to strike any accept buffers.
+	ist->usb_bufferaccept = 0;
 
 	__asm__ __volatile__( "movi a0, usb_reinstate" ); //After this token, we are immediately expecting another grouping.  This short-circuits the 'return'.
 }
@@ -147,9 +149,9 @@ void handle_sof( uint32_t this_token, struct usb_internal_state_struct * ist )
 
 void PerpetuatePacket( struct usb_internal_state_struct * ist )
 {
-	if( ist->usb_bufferout )
+	if( ist->usb_bufferret )
 	{
-		int tosend = ist->usb_bufferout_len;
+		int tosend = ist->usb_bufferret_len;
 		if( tosend > 8 ) tosend = 8;
 
 		uint8_t sendnow[12];
@@ -163,16 +165,16 @@ void PerpetuatePacket( struct usb_internal_state_struct * ist )
 			sendnow[1] = 0b11000011; //DATA0
 		}
 
-		if( ist->usb_bufferout == (uint8_t*)1 )  //Tricky: Empty packet.
+		if( ist->usb_bufferret == (uint8_t*)1 )  //Tricky: Empty packet.
 		{
 			usb_send_data( sendnow, 2, 3 );  //Force a CRC
-			ist->usb_bufferout = 0;
-			ist->usb_bufferout_len = 0;
+			ist->usb_bufferret = 0;
+			ist->usb_bufferret_len = 0;
 		}
 		else
 		{
 			if( tosend )
-				ets_memcpy( sendnow+2, ist->usb_bufferout, tosend );
+				ets_memcpy( sendnow+2, ist->usb_bufferret, tosend );
 			usb_send_data( sendnow, tosend+2, 0 );
 			ist->last_sent_qty = tosend;
 		}
@@ -184,14 +186,16 @@ void handle_in( uint32_t this_token, struct usb_internal_state_struct * ist )
 	uint8_t addr = (this_token>>8) & 0x7f;
 	uint8_t endp = (this_token>>15) & 0xf;
 
+	//If we get an "in" token, we have to strike any accept buffers.
+	ist->usb_bufferaccept = 0;
+
 	if( endp == 0x1 && addr == ist->my_address )
 	{
-		ist->debug = this_token;
-		if( sendep1 )
+		if( ist->sendep1 )
 		{
-			ist->usb_bufferout = ep1data;
-			ist->usb_bufferout_len = sizeof( ep1data );
-			sendep1 = 1;
+			ist->usb_bufferret = ist->ep1data;
+			ist->usb_bufferret_len = sizeof( ist->ep1data );
+			ist->sendep1 = 0;
 		}
 		else
 		{
@@ -207,6 +211,8 @@ void handle_in( uint32_t this_token, struct usb_internal_state_struct * ist )
 
 void handle_out( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
+	//I ... uuhh... I don't think we need to do anything here, unless we're accepting interrupt_in data.
+
 	__asm__ __volatile__( "movi a0, usb_reinstate" );  //After this token, we are immediately expecting another grouping.  This short-circuits the 'return'.
 }
 
@@ -222,8 +228,28 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 		goto just_ack;
 	}
 
-
 	ist->usb_buffer_status ^= 1; //Expect opposite DATA command next.
+
+	if( ist->usb_bufferaccept )  //For accepting data from endpoints and control out messages.
+	{
+		int acc = ist->packet_size-3;  //packet_size includes CRC and PID
+		ist->debug = ist->packet_size;
+
+		if( acc > ist->accept_length )
+		{
+			acc = ist->accept_length;
+		}
+
+		ets_memcpy( ist->usb_bufferaccept, ist->usb_buffer+1, acc );  //First byte of USB buffer is token.
+		ist->accept_length -= acc;
+		ist->usb_bufferaccept += acc;
+
+		if( ist->accept_length == 0 )
+		{
+			ist->user_control_length_acc = ist->usb_bufferaccept - ist->user_control;
+			ist->usb_bufferaccept = 0;
+		}
+	}
 
 	if( ist->setup_request )
 	{
@@ -234,8 +260,8 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 		//s->wLength = ((s->wLength)>>8) | ((s->wLength&0xff)<<8);
 
 		//Send just a data packet.
-		ist->usb_bufferout = (uint8_t*)1;
-		ist->usb_bufferout_len = 0;
+		ist->usb_bufferret = (uint8_t*)1;
+		ist->usb_bufferret_len = 0;
 
 		if( s->bmRequestType & 0x80 )
 		{
@@ -257,9 +283,21 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 				}
 
 
-				ist->usb_bufferout = dl->addr;
-				ist->usb_bufferout_len = dl->length;
-				if( s->wLength < ist->usb_bufferout_len ) ist->usb_bufferout_len = s->wLength;
+				ist->usb_bufferret = dl->addr;
+				ist->usb_bufferret_len = dl->length;
+				if( s->wLength < ist->usb_bufferret_len ) ist->usb_bufferret_len = s->wLength;
+			}
+
+			/////////////////////////////EXAMPLE CUSTOM CONTROL MESSAGE/////////////////////////////
+			if(s->bRequest == 0xa7 ) //US TO HOST "in"
+			{
+				if( ist->user_control_length_ret )
+				{					
+					ist->usb_bufferret = ist->user_control;
+					ist->usb_bufferret_len = ist->user_control_length_ret;
+					if( s->wLength < ist->usb_bufferret_len ) ist->usb_bufferret_len = s->wLength;
+					ist->user_control_length_ret = 0;
+				}
 			}
 		}
 		else if( s->bmRequestType == 0x00 )
@@ -271,6 +309,16 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 			if( s->bRequest == 0x09 ) //Set configuration.
 			{
 				//s->wValue; has the index.  We don't really care about this.
+			}
+
+			/////////////////////////////EXAMPLE CUSTOM CONTROL MESSAGE/////////////////////////////
+			if( s->bRequest == 0xa6 && ist->user_control_length_acc == 0 ) //HOST TO US "out"
+			{
+				ist->usb_bufferaccept = ist->user_control;
+
+				ist->accept_length = sizeof( ist->user_control );
+				if( s->wLength < ist->accept_length )
+					ist->accept_length = s->wLength;
 			}
 		}
 	}
@@ -288,13 +336,13 @@ void handle_ack( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
 	ist->usb_buffer_status ^= 2;  //Invert next "DATAx" to host.
 
-	if( ist->usb_bufferout > (uint8_t*)1 )
+	if( ist->usb_bufferret > (uint8_t*)1 )
 	{
-		ist->usb_bufferout_len -= ist->last_sent_qty;
-		if( ist->usb_bufferout_len == 0 )
-			ist->usb_bufferout = 0;
+		ist->usb_bufferret_len -= ist->last_sent_qty;
+		if( ist->usb_bufferret_len == 0 )
+			ist->usb_bufferret = 0;
 		else
-			ist->usb_bufferout += ist->last_sent_qty;
+			ist->usb_bufferret += ist->last_sent_qty;
 	}
 
 	ist->last_sent_qty = 0;

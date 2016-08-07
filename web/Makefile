@@ -1,5 +1,7 @@
 all : execute_reflash page.mpfs push 
 
+CFLAGS:=-g
+
 IP?=192.168.4.1
 
 mfsmaker : mfsmaker.c
@@ -10,7 +12,7 @@ page.mpfs : mfsmaker page
 	./mfsmaker page page.mpfs
 
 pushtodev : pushtodev.c
-	gcc -o $@ $^
+	gcc  -g -o $@ $^ -lusb-1.0
 
 execute_reflash : execute_reflash.c md5.c
 	gcc -o $@ $^
