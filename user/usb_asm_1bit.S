@@ -293,7 +293,7 @@ usb_send_data:            //A2 = pointer to data  //A3 = length of data,, A4  = 
 
 	rsr a15, ccount
 
-	movi a0, (3<<DMINUSBASE)
+	movi a0, (3<<DMINUSBASE)  //TODO: Pull these from the table.
 	_s32i.n    a0, a11, GPIO_OFFSET_DIR_OUT //Set pins to output.
 
 	movi a7, 0
@@ -323,32 +323,28 @@ looper_data:
 	//If it's a 1, keep a7 "last bit" the same.
 	//If not, flip A7... Unless our bit stuffing alarm goes off.
 
-
-	//TODO: Maybe the CRCs could be condensed.
 	bbci	a12, 0, data_bit_0
-			addi a6, a6, 1
-			xor a0, a12, a5
-			srli a12, a12, 1
+		addi a6, a6, 1
+		xor a0, a12, a5
 
-			//CRC
-			_srli   a5, a5, 1 
-			_bbci   a0, 0, end_looper_bit
-			xor     a5, a5, a4
-			j end_looper_bit
+		srli a12, a12, 1
+
+		j do_the_crc_bit
 
 	data_bit_0:
-			movi a6, 0
-			movi a0, 1
-			xor a7, a0, a7
+		movi a6, 0
+		movi a0, 1
 
-			_xor a0, a12, a5
-			_srli a12, a12, 1
+		xor a7, a0, a7
+		_xor a0, a12, a5
 
-			//CRC
-			_srli   a5, a5, 1 
-			_bbci   a0, 0, end_looper_bit
-			xor     a5, a5, a4
-			j end_looper_bit
+		_srli a12, a12, 1
+
+do_the_crc_bit:
+	//CRC
+	_srli   a5, a5, 1 
+	_bbci   a0, 0, end_looper_bit
+	xor     a5, a5, a4
 
 
 end_looper_bit:
@@ -380,7 +376,7 @@ skip_high_usr_data:
 		//slli a12, a12, 1
 		l8ui a12, a2, 0
 		addi a2, a2, 1
-		movi a0, 0x100
+		movi a0, 0x100  //Put a bit in the 256ths place so we can tell when we've run out of bits.  This way we can avoid a counter
 		or a12, a12, a0
 		bnei a4, 1, not_one
 			_l32i.n		a4, a14, CRC16_POLY_OFFSET
@@ -420,7 +416,7 @@ emit_data_bit_for_starting_end:
 	bbsi a0, 31, emit_data_bit_for_starting_end
 
 	//Super tricky: If we have to bit stuff the last bit, do it here.
-	//http://www.ti.com/lit/an/spraat5a/spraat5a.pdf 7.1.9
+ss	//http://www.ti.com/lit/an/spraat5a/spraat5a.pdf 7.1.9
 	blti a6, 6, done_bit_stuff
 		movi a0, -1
 		xor a7, a0, a7
@@ -483,6 +479,8 @@ DEBUG_HIGH
 	ret.n
 
 
+
+//This brainstorm was from way back in the beginning.  Mostly OBE now!
 
 /* Brainstorming... If we did ONE BIT per table pair...
 
