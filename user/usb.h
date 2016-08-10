@@ -1,8 +1,21 @@
 #ifndef _USB_H
 #define _USB_H
 
+#define USB_LOW_SPEED
+//#define USB_FULL_SPEED  (Not implemented)
+#define DEBUGPIN 5
 
-#define USB_BUFFERSIZE 16
+#define DPLUS 13
+#define DMINUS 12
+#define DMINUSBASE 12  //Must be D- first, then D+ second.
+
+#define PERIPHSDPLUS    PERIPHS_IO_MUX_MTDI_U
+#define PERIPHSDMINUS   PERIPHS_IO_MUX_MTCK_U
+#define FUNCDPLUS  FUNC_GPIO13
+#define FUNCDMINUS FUNC_GPIO12
+
+
+#define USB_BUFFERSIZE 16  //Must be big enough to hold PID + DATA + EOF (plus a bit just in case)
 
 #define USB_OFFSET_BUFFER		0
 #define USB_OFFSET_DSTATUS		(USB_BUFFERSIZE)
@@ -51,6 +64,9 @@ struct usb_internal_state_struct
 };
 
 extern struct usb_internal_state_struct usb_internal_state __attribute__((aligned(4)));
+
+void ICACHE_FLASH_ATTR init_usb();
+
 extern void gpio_intr();
 
 //poly_function = 0 to include CRC.
@@ -82,17 +98,6 @@ extern uint32_t usb_reinstate;
 #endif
 
 
-
-
-
-#define USB_LOW_SPEED
-//#define USB_FULL_SPEED
-
-#define DEBUGPIN 5
-
-#define DPLUS 13
-#define DMINUS 12
-#define DMINUSBASE 12  //Must be D- first, then D+ second.
 
 #define _BV(x) ((1)<<(x))
 

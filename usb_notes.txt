@@ -62,6 +62,9 @@
 //		bgeui	a10, 5, 40100b60 <end>
 //
 //
+//  Big note: with regular jumps and comparative jumps, if the target's address ends with  11 (binary), then it will take one extra cycle.
+//
+//
 //  3 Clocks
 //		j	end
 //		...
@@ -209,6 +212,97 @@
 //
 
 
+/*
+	this is 5 cycles... Multiplies take two cycles to complete, but only one to issue.
+	mul16u a7, a5, a6
+	bbsi a7, 0, skipper
+		_nop.n
+		_nop
+	skipper:
+
+	...ALSO 5
+
+	mul16u a7, a5, a6
+	nop
+	bbsi a7, 0, skipper
+		_nop.n
+		_nop
+	skipper:
+
+	... ALSO 5
+	mul16u a7, a5, a6
+	mul16u a5, a5, a6
+	bbsi a7, 0, skipper
+		_nop.n
+		_nop.n
+	skipper:
+
+	...BUT if we use one multiply in another multiply it stalls. (6 cycles)
+	mul16u a7, a5, a6
+	mul16u a7, a5, a7
+	bbsi a7, 0, skipper
+		_nop.n
+		_nop.n
+	skipper:
+*/
+
+
+/*
+	Calling...
+	
+.align 4
+my_test_call:
+	ret
+
+elsewhere..
+	_call0 my_test_call
+
+	//IF the last two bits of the address the CALL line is on are:
+	//  00 = 7 cycles
+	//  01 = 6 cycles
+	//	10 = 6 cycles
+	//  11 = 7 cycles
+
+*/
+
+
+/*
+	Revisiting l32
+	//A4 = some place within iram, aligned.  Unaligned reads will crash regardless of if they're from iram or dram.
+
+
+	//7, 8 cycles (Or +1 if there is a dependency)
+	//
+	// If l32r's address ends in:
+	//		00: 7 cycles
+	//		01: 7 cycles
+	//		10: 8 cycles
+	//		11: 8 cycles
+	_l32r a6, my_test_data
+	add a6, a7, a7	
+
+	//l32i behaves exactly the same!!!  Btw! Can only load from an address that ends in 00.
+
+
+	You can't seem to l8ui from iram.  It seems to always crash.
+
+	//A4 = some place within dram
+
+	//2 Cycles
+	_l32i.n a6, a4, 0
+	add a7, a7, a7
+
+	//3 Cycles
+	_l32i.n a7, a4, 0
+	add a7, a7, a7
+
+	
+	//2 Cycles  (If a4 is aligned or not, regardless)
+	_l8i.n a6, a4, 0
+	add a7, a7, a7  (3 cycles if the dependency exists)
+
+	
+*/
 
 
 
@@ -216,11 +310,7 @@
 
 
 
-
-
-
-
-
+////////////////////////////////////////////////////
 
 
 #if 0

@@ -47,6 +47,7 @@ static void ICACHE_FLASH_ATTR procTask(os_event_t *events)
 {
 	CSTick( 0 );
 
+	//This is how you send mouse commands.
 	usb_internal_state.ep1data[1] = 1;
 	usb_internal_state.sendep1 = 1;
 
@@ -66,7 +67,7 @@ static void ICACHE_FLASH_ATTR procTask(os_event_t *events)
 	system_os_post(procTaskPrio, 0, 0 );
 }
 
-extern uint32_t usb_ramtable[31] __attribute__((aligned(16)));
+//extern uint32_t usb_ramtable[31] __attribute__((aligned(16)));
 
 //Timer event.
 static void ICACHE_FLASH_ATTR myTimer(void *arg)
@@ -209,23 +210,7 @@ void user_init(void)
 
 	printf( "Boot Ok.\n" );
 
-    ETS_GPIO_INTR_DISABLE();                                           //Close the GPIO interrupt
-
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,FUNC_GPIO12); //D- (needs pullup)
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U,FUNC_GPIO13); //D+
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U,FUNC_GPIO0);
-    PIN_DIR_INPUT = _BV(0)|_BV(12)|_BV(13);
-	PIN_PULLUP_DIS( PERIPHS_IO_MUX_MTCK_U );
-	PIN_PULLUP_EN( PERIPHS_IO_MUX_MTDI_U );
-
- //   gpio_output_set(0, 0, 0, GPIO_ID_PIN(0)); // Set GPIO0 as input
-    GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(0));
-//   os_delay_us(1000);
-    ETS_GPIO_INTR_ATTACH(gpio_intr,NULL);                         //
-    gpio_pin_intr_state_set(GPIO_ID_PIN(12),GPIO_PIN_INTR_POSEDGE);    //Falling edge trigger
-//    gpio_pin_intr_state_set(GPIO_ID_PIN(12), 1); // Interrupt on any GPIO12 edge - See more at: http://www.esp8266.com/viewtopic.php?p=8536#sthash.4CmgfFKW.dpuf
-    ETS_GPIO_INTR_ENABLE();
-
+	init_usb();
  
 	wifi_set_sleep_type(LIGHT_SLEEP_T);
 	wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);

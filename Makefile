@@ -63,7 +63,7 @@ $(TARGET_OUT) : $(SRCS)
 	$(PREFIX)gcc $(CFLAGS) $^  -flto $(LINKFLAGS) -o $@
 	nm -S -n $(TARGET_OUT) > image.map
 	$(PREFIX)objdump -S $@ > image.lst
-	$(PREFIX)size $@
+	$(PREFIX)size --format=SysV $@
 
 
 

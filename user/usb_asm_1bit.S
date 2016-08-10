@@ -1,23 +1,62 @@
-//This file is super trashy and was kind of my first whack at this.
-//It should probably get cleaned up.
+/*
+   (C) 2016 <>< Charles Lohr, Under the Espressif modified MIT license.
+
+	This is the assembly file that drives the low level bits for the ESP8266.
+	Global symbols used in this file:
+		* usb_ramtable = Created by table (in the tabler) folder.  Must be loaded into dram to work.
+
+	Global functions that must be implemented elsewhere.
+		* handle_setup
+		* handle_sof
+		* handle_in
+		* handle_out
+		* handle_data
+
+	Provided symbols include:
+		* gpio_intr = Interrupt to be called on the rising edge of D-.
+		* usb_send_data = Send a USB packet back to the host.
+*/
 
 #include <common.h>
 
 #define _INASM_
 #include "usb_table_1bit.h"
 
-#define PIN_OUT        0x60000300
-#define PIN_OUT_SET    0x60000304
-#define PIN_OUT_CLEAR  0x60000308
-#define PIN_DIR        0x6000030C
-#define PIN_DIR_OUTPUT 0x60000310
-#define PIN_DIR_INPUT  0x60000314
-#define PIN_IN         0x60000318
-#define _BV(x) ((1)<<(x))
-
 
 #define DEBUG_HIGH    _s32i.n	a13, a11, GPIO_OFFSET_SET
 #define DEBUG_LOW     _s32i.n	a13, a11, GPIO_OFFSET_CLEAR
+
+
+//				8 works, 9 is spotty at best.
+//				-26 works, 27 is spotty at best.
+//				Optimal spot: -9
+#define PHASE_DELAY     -9
+#define DELAY_ONE_USB_BIT	call0 util_wait_usb_ccount
+
+//We handle advancing the timer by one tick in here.
+//Because 80 MHz does not divide evenly into 1.5 MHz, we have to advance by
+//53 ticks, 53 ticks, then 54 ticks.  we use a10 to keep track of which bit we're on.
+//a15 is the actual time (in ccount (clock counts)) that we're at.  And, a6 is a trash
+//variable.  Don't expect it to stick around.
+.align 4
+util_wait_usb_ccount:
+	_addi a15, a15, 53  //Advance 53 ticks
+	_addi.n a10, a10, 1
+	_blti a10, 3, delayer_ccount //See if we need to add another tick
+	_addi.n a15, a15, 1 //If so, add the tick and clear out the no-tick counter
+	_movi.n a10, 0
+delayer_ccount:
+	_rsr a6, ccount
+	_sub a6, a6, a15
+	_bbsi a6, 31, delayer_ccount
+	_ret.n
+
+
+//############################################################################################
+//############################################################################################
+//############################################################################################
+//############################################################################################
+
 
 //Detailed analysis of some useful stuff and performance tweaking: http://naberius.de/2015/05/14/esp8266-gpio-output-performance/
 //Reverse engineerd boot room can be helpful, too: http://cholla.mmto.org/esp8266/bootrom/boot.txt
@@ -28,24 +67,24 @@
 #define SIZE_OF_BUFFER 24
 
 .global gpio_intr
-
+.align 4
 gpio_intr:
 	_addi a1, a1, -68
-	_s32i.n a0, a1, 0
-	_s32i.n a2, a1, 4   // Working reg
-	_s32i.n a3, a1, 8   //  Running CRC
+	_s32i.n a0, a1, 0   // Working reg
+	_s32i.n a2, a1, 4   // Running byte
+	_s32i.n a3, a1, 8   // Running CRC
 	_s32i.n a4, a1, 12  // Anding mask
 	_s32i.n a5, a1, 16  // Status Word (for table)
-	_s32i.n a6, a1, 20  // Current Pins
+	_s32i.n a6, a1, 20  // A Working register)
 	_s32i.n a7, a1, 24  // The current byte ready to be written out.
 	_s32i.n a8, a1, 28  // Buffer Output Offset
-	_s32i.n a9, a1, 32  // Timing
+	_s32i.n a9, a1, 32  // Loop Amount
 	_s32i.n a10, a1, 36 // Timing-off-by-three (For doing the 53/54 dance)
 	_s32i.n a11, a1, 40 // GPIO_BASE
-	_s32i.n a12, a1, 44 //  CRC Polynomial
+	_s32i.n a12, a1, 44 // CRC Polynomial
 	_s32i.n a13, a1, 48 // Debug Output Pin
 	_s32i.n a14, a1, 52 // Main Ramtable
-	_s32i.n a15, a1, 56 // Loop Amount
+	_s32i.n a15, a1, 56 // Timing
 
 	DISABLE_INTERRUPTS_LCL  	//Uses stack space 60 and 64 
 
@@ -56,94 +95,87 @@ usb_reinstate: //Come back up here if we are expecting more data.
 
 	//These are for debug.
 	_movi.n    a13, 1<<DEBUGPIN
-	_movi.n		a0, 0
-	ssl a0
-	_l32i.n    a15, a14, LOOP_COUNT_OFFSET
+	_movi.n		a2, 0
+	ssl a2
+
+	//Here, we load values with their entries from the table.
+	//We do this because it's so darned fast.  Each of these actually only takes one cycle.
+	//We also do it this way because Xtensa doesn't have any movi, XXX for a 32-bit value.
+	_l32i.n    a9, a14, LOOP_COUNT_OFFSET
 	_l32i.n    a11, a14, GPIO_BASE_OFFSET
 
 	_movi      a7, 0 //Set nibble+1, so if we ever get a full byte, it'll breach the 4th bit in the 2nd byte of the register
-	_movi      a5, (0x38+4)   //Initial Status Word
+	_movi      a5, (0x38)   //Initial Status Word  (Add 4 if you want to change the initially-high or low value)
 	_l32i.n    a4, a14, ANDING_MASK_OFFSET
 
 	_l32i.n    a8, a14, USB_INTERNAL_STATE_OFFSET
-	_l32i.n	   a15, a14, RUNNING_TIMEOUT_OFFSET  //# of times to loop.
+	_l32i.n	   a9, a14, RUNNING_TIMEOUT_OFFSET  //# of times to loop.
 
 	DEBUG_HIGH
-find_high:
-    l32i.n a2, a11, GPIO_OFFSET_INPUT
-	addi.n a15, a15, -1
-	bbsi a2, DPLUS, done_high
-	bnez a15, find_high
+find_high:	//Search for when the pin is high.
+    l32i.n a6, a11, GPIO_OFFSET_INPUT
+	addi.n a9, a9, -1
+	bbsi a6, DPLUS, done_high
+	bnez a9, find_high
 	j end_gpio_intr
 done_high:
-find_low:
-    l32i.n a2, a11, GPIO_OFFSET_INPUT
-	addi.n a15, a15, -1
-	bbci a2, DPLUS, done_low
-	bnez a15, find_low
+find_low:	//Once we find it high, we need to look for the falling edge so we can sync our clocks.
+    l32i.n a6, a11, GPIO_OFFSET_INPUT
+	addi.n a9, a9, -1
+	bbci a6, DPLUS, done_low
+	bnez a9, find_low
 	j end_gpio_intr
 done_low:
-	DEBUG_LOW
-	DEBUG_HIGH
 
 	movi a10, 0
-	_rsr a9, ccount
+	_rsr a15, ccount
 
-	//Phase shift?  (-53 is OKAY)
-	//-12 almost great!... why???
-	//-16 better yet...
-	//-23 ALMOST works
-	//-33 sads a lot
-	//-39 sads less
-	_addi a9, a9, -52 //TODO: Optimize!!!
+//	DEBUG_LOW
+//	DEBUG_HIGH
 
-	l32i a15, a14, RUNNING_TIMEOUT_OFFSET  //# of times to loop.
+	_addi a15, a15, PHASE_DELAY
+
+	l32i a9, a14, RUNNING_TIMEOUT_OFFSET  //# of times to loop.
 
 looper:
 	DEBUG_HIGH
-	addi a15, a15, -1
-	beqz a15, end_gpio_intr
-	addi a9, a9, 53
-	addi a10, a10, 1
-	blti a10, 3, delayer
-	addi a9, a9, 1
-	movi a10, 0
-delayer:
-	rsr a2, ccount
-	sub a2, a2, a9
-	bbsi a2, 31, delayer
+	addi a9, a9, -1
+	beqz a9, end_gpio_intr
+
+
+	DELAY_ONE_USB_BIT
 
 
 	_l32i.n a6, a11, GPIO_OFFSET_INPUT           //Read pins in.
 	DEBUG_LOW
 	_and a5, a5, a4
-	_extui a2, a6, DMINUSBASE, 2  //Extract two bits.
-	_or a5, a5, a2
-	_add a2, a14, a5			 //Offset the table
-	_l8ui a5, a2, TABLE_OFFSET //Read the data back
-	_ssl a0			//  << This is a "free" instruction - we can stick this here.
+	_extui a6, a6, DMINUSBASE, 2  //Extract two bits.
+	_or a5, a5, a6
+	_add a6, a14, a5			 //Offset the table
+	_l8ui a5, a6, TABLE_OFFSET //Read the data back
+	_ssl a2			//  << This is a "free" instruction - we can stick this here.
 	_bbsi a5, 7, term            //If terminate bit set, exit.
 	_bbci a5, 1, skip_set
-		_extui a2, a5, 0, 1
-		_sll   a2, a2  			//Shift that bit up to where it needs to be.
-		_or a7, a7, a2          //Or it in.
-		_addi a0, a0, 1
+		_extui a6, a5, 0, 1
+		_sll   a6, a6  			//Shift that bit up to where it needs to be in our temporary word register
+		_or a7, a7, a6          //Or it in.
+		_addi a2, a2, 1
 
 		//Do our CRC
-		xor a2, a5, a3
+		xor a6, a5, a3
 		_srli   a3, a3, 1
-		_bbci  a2, 0, skip_set
+		_bbci  a6, 0, skip_set
 		xor a3, a3, a12
 
 	skip_set:
 
 	//See if we have a full byte?
-	_blti a0, 8, looper
-		_l32i.n    a2, a14, USB_INTERNAL_STATE_OFFSET
-		_bne       a2, a8,  write_cont
+	_blti a2, 8, looper
+		_l32i.n    a6, a14, USB_INTERNAL_STATE_OFFSET
+		_bne       a6, a8,  write_cont
 
 		//If we're at the first byte, initialize the CRC stuff.
-		bbci a7, 1, not_crc16
+		bbci a7, 1, not_crc16  //Tricky: Look at bit 1 in the PID.  If it's 1, then its a DATA0 or DATA1 packet, each of which we have to calculate the CRC16 on.
 			_l32i.n		a12,a14, CRC16_POLY_OFFSET
 			_l32i.n		a3, a14, CRC16_INIT_OFFSET
 			j write_cont
@@ -153,21 +185,24 @@ delayer:
 	write_cont:
 		_s8i a7, a8, USB_OFFSET_BUFFER
 		_addi a8, a8, 1
-		_addi a0, a0, -8
+		_addi a2, a2, -8
 		_srli a7, a7, 8
 
 	//Jump back to looper anyway.
 	j looper
 term:
-	_l32i.n    a9, a14, USB_INTERNAL_STATE_OFFSET
-	l8ui       a7, a9, 0
+	_l32i.n    a15, a14, USB_INTERNAL_STATE_OFFSET
+	l8ui       a7, a15, 0
 
+	//The way USB works, if you run the packet and the CRC into the CRC algorithm,
+	//the CRC will always be the same output.  Therefore we check against that new
+	//CRC and if it matches we know we have a good packet!
 	movi a5, CRC5_CHECK
 	bbci a7, 1, not_crc16_check
 		_l32i.n 	a5,  a14, CRC16_CHECK_OFFSET
 	not_crc16_check:
 
-	sub a10, a8, a9
+	sub a10, a8, a15
 
 	//Check to make sure we have more than just a token.
 	blti a10, 2, skip_crc_check
@@ -177,56 +212,53 @@ term:
 skip_crc_check:
 
 	//CRCs Match.  Proceed with protocol.
-	mov a3, a9
+	mov a3, a15
 
-//	movi a2, 0xface  //Debug
-//	s32i		a2, a9, USB_OFFSET_DEBUG
+//	movi a0, 0xface  //Debug
+//	s32i		a0, a15, USB_OFFSET_DEBUG
 
 	_s32i.n    a10, a3, USB_OFFSET_PACKET_SIZE
 	_l32i.n    a2, a3, USB_OFFSET_BUFFER
 
 
-	//Set return address
+	//Set return address for the following calls.  That way we can skip the rest of the code.
 	movi a0, end_gpio_intr  //XXX: TODO: We can play tricks with this to read it from RAM faster.
 
 	bbsi a2, 0, token_or_data
-		extui a9, a2, 1, 7
-		addi a9, a9, -0b1101001  //Make sure this is an ack.
-		beqz a9, handle_ack
+		extui a15, a2, 1, 7
+		addi a15, a15, -0b1101001  //Make sure this is an ack.
+		beqz a15, handle_ack
 		j end_gpio_intr
 	token_or_data:
-		bbsi a2, 1, data_msg
-			extui a9, a2, 2, 6
-			addi a8, a9, -0b001011
+		bbsi a2, 1, data_msg        //Jump to the correct C function, don't call!  We already put the return address in A0.
+			extui a15, a2, 2, 6
+			addi a8, a15, -0b001011
 			beqz a8, handle_setup
-			addi a8, a9, -0b101001
+			addi a8, a15, -0b101001
 			beqz a8, handle_sof
-			addi a8, a9, -0b011010
+			addi a8, a15, -0b011010
 			beqz a8, handle_in
-			addi a8, a9, -0b111000
+			addi a8, a15, -0b111000
 			beqz a8, handle_out		
 			j end_gpio_intr //We don't understand this message
 		data_msg:
-			extui a9, a2, 2, 6
+			extui a15, a2, 2, 6
 			extui a4, a2, 3, 1
-			addi a8, a9, -0b110000
+			addi a8, a15, -0b110000
 			beqz a8, handle_data
-			addi a8, a9, -0b010010
+			addi a8, a15, -0b010010
 			beqz a8, handle_data
 			j end_gpio_intr  //Unmatched message?
 
+	//No code here should be called.
+
 end_gpio_intr:
 
+	//Warning: Right here, GCC likely has clobbered a bunch of our registers so
+	//be careful what you do.
 
-//Can't do this here, since GCC probably clobbered some registers.
-//	DEBUG_HIGH
-//	DEBUG_LOW
-
-	//Acknowledge interrupt
-	//This looks VERY WRONG!
-
-	//UGH!!! GCC Clobbers these registers.  We should consider backing them up.
-	movi       a14, usb_ramtable	//This is actually very slow.
+	//This code acknowledges the interrupt.  I think it looks wrong, but it seems to work...
+	movi       a14, usb_ramtable
 	_l32i.n    a11, a14, GPIO_BASE_OFFSET
 	_l32i.n a4, a11, GPIO_OFFSET_GPIO_STATUS
 	_s32i.n a4, a11, GPIO_OFFSET_GPIO_STATUS_W1TC
@@ -236,48 +268,45 @@ end_gpio_intr:
 	_l32i.n a0, a1, 0
 	_l32i.n a2, a1, 4
 	_l32i.n a3, a1, 8
-	_l32i.n a4, a1, 12  // Anding mask
-	_l32i.n a5, a1, 16  // Status Word (for table)
-	_l32i.n a6, a1, 20  // Current Pins
-	_l32i.n a7, a1, 24  // The current byte ready to be written out.
+	_l32i.n a4, a1, 12
+	_l32i.n a5, a1, 16
+	_l32i.n a6, a1, 20
+	_l32i.n a7, a1, 24
 	_l32i.n a8, a1, 28
-	_l32i.n a9, a1, 32  // Timing
-	_l32i.n a10, a1, 36 // Timing-off-by-three (For doing the 53/54 dance)
-	_l32i.n a11, a1, 40 // Pins in
-	_l32i.n a12, a1, 44 // Shift Amount
-	_l32i.n a13, a1, 48 // Debug Output Address
-	_l32i.n a14, a1, 52 // Main Ramtable
-	_l32i.n a15, a1, 56 // Loop Amount
+	_l32i.n a9, a1, 32
+	_l32i.n a10, a1, 36
+	_l32i.n a11, a1, 40
+	_l32i.n a12, a1, 44
+	_l32i.n a13, a1, 48
+	_l32i.n a14, a1, 52
+	_l32i.n a15, a1, 56
 	_addi a1, a1, 68
 	ret.n
 
-
 //############################################################################################
 //############################################################################################
 //############################################################################################
 //############################################################################################
 
+.global usb_send_data
+.align 4
 usb_send_data:            //A2 = pointer to data  //A3 = length of data,, A4  = (0, do normal CRC, 2, dont do CRC, 3 make empty CRC)
-	_addi a1, a1, -68
-	//56 = Temporary buffer for holding CRC
+	_addi a1, a1, -68  //Extra room because we will store the CRC on the stack.
 	_s32i.n a15, a1, 52   //Timer/Counter
 	_s32i.n a14, a1, 48   //Core ramtable
-	_s32i.n a13, a1, 44   //Debug
+	_s32i.n a13, a1, 44   //"Number of 1's"
 	_s32i.n a12, a1, 40   //[[Current Byte, padded with extra 1 on top]]
 	_s32i.n a11, a1, 36   //GPIO Base
 	_s32i.n a10, a1, 32   //Timer/Count (adder)
 	_s32i.n a9, a1, 24    //Inverted State
 	_s32i.n a8, a1, 20    //Positive State
 	_s32i.n a7, a1, 16    //"Last Bit"
-	_s32i.n a6, a1, 12    //"Number of 1's"
+	_s32i.n a6, a1, 12    //Work Register
 	_s32i.n a5, a1, 8    	//CRC Current
-//	_s32i.n a4, a1, 4		//CRC Poly
+//	_s32i.n a4, a1, 4		//CRC Poly  (This is actually passed in)
 	_s32i.n a0, a1, 0		//"Work" register
 
-//	movi	a4, 0
-
 	movi       a14, usb_ramtable	//This is actually very slow.
-	_movi.n    a13, 1<<DEBUGPIN
 	_l32i.n    a11, a14, GPIO_BASE_OFFSET
 
 	movi a0, ~(3<<DMINUSBASE)
@@ -297,7 +326,7 @@ usb_send_data:            //A2 = pointer to data  //A3 = length of data,, A4  = 
 	_s32i.n    a0, a11, GPIO_OFFSET_DIR_OUT //Set pins to output.
 
 	movi a7, 0
-	movi a6, 0
+	movi a13, 0
 
 continue_send_data:
 
@@ -312,9 +341,9 @@ looper_data:
 	//Examine current bit (will be bit0 of a12)
 
 	//Stuff test
-	blti a6, 6, skip_stuff_test_one
+	blti a13, 6, skip_stuff_test_one
 		//We need to bit stuff.
-		movi a6, 0
+		movi a13, 0
 		movi a0, 1
 		xor a7, a0, a7
 		j end_looper_bit
@@ -324,7 +353,7 @@ looper_data:
 	//If not, flip A7... Unless our bit stuffing alarm goes off.
 
 	bbci	a12, 0, data_bit_0
-		addi a6, a6, 1
+		addi a13, a13, 1
 		xor a0, a12, a5
 
 		srli a12, a12, 1
@@ -332,7 +361,7 @@ looper_data:
 		j do_the_crc_bit
 
 	data_bit_0:
-		movi a6, 0
+		movi a13, 0
 		movi a0, 1
 
 		xor a7, a0, a7
@@ -348,15 +377,8 @@ do_the_crc_bit:
 
 
 end_looper_bit:
-	addi a15, a15, 53
-	addi a10, a10, 1
-	blti a10, 3, emit_data_bit
-	addi a15, a15, 1
-	movi a10, 0
-emit_data_bit:
-	rsr a0, ccount
-	sub a0, a0, a15
-	bbsi a0, 31, emit_data_bit
+
+	DELAY_ONE_USB_BIT
 
 	//It seems odd, but we do this after the wait so we get precise timing.
 
@@ -373,7 +395,7 @@ skip_high_usr_data:
 		//Yep, need another byte.
 		addi a3, a3, -1
 		beqz a3, done_data
-		//slli a12, a12, 1
+
 		l8ui a12, a2, 0
 		addi a2, a2, 1
 		movi a0, 0x100  //Put a bit in the 256ths place so we can tell when we've run out of bits.  This way we can avoid a counter
@@ -409,43 +431,28 @@ actually_done:
 
 
 
-	addi a15, a15, 53
-emit_data_bit_for_starting_end:
-	rsr a0, ccount
-	sub a0, a0, a15
-	bbsi a0, 31, emit_data_bit_for_starting_end
+	DELAY_ONE_USB_BIT
 
 	//Super tricky: If we have to bit stuff the last bit, do it here.
-ss	//http://www.ti.com/lit/an/spraat5a/spraat5a.pdf 7.1.9
-	blti a6, 6, done_bit_stuff
+	//http://www.ti.com/lit/an/spraat5a/spraat5a.pdf 7.1.9
+	blti a13, 6, done_bit_stuff
 		movi a0, -1
 		xor a7, a0, a7
-
 		bbsi a7, 0, is_high_usr_data_bit_stuff
 			_s32i.n a9, a11, GPIO_OFFSET_OUT
 			j skip_high_usr_data_bit_stuff
 			is_high_usr_data_bit_stuff:
 				_s32i.n a8, a11, GPIO_OFFSET_OUT
 			skip_high_usr_data_bit_stuff:	
-
-		addi a15, a15, 53
-		emit_data_bit_for_starting_end_bit_stuff:
-			rsr a0, ccount
-			sub a0, a0, a15
-			bbsi a0, 31, emit_data_bit_for_starting_end_bit_stuff
-
-
+		DELAY_ONE_USB_BIT
 	done_bit_stuff:
 
 	//Go low/low for two cycles.
 	movi a0, (3<<DMINUSBASE)
 	_s32i.n    a0, a11, GPIO_OFFSET_CLEAR //Set pins to output.
 
-	addi a15, a15, 107
-emit_data_bit_for_starting_end_final:
-	rsr a0, ccount
-	sub a0, a0, a15
-	bbsi a0, 31, emit_data_bit_for_starting_end_final
+	addi a15, a15, 53 //Wait an extra cycle, so our SE0 will be two bits.
+	DELAY_ONE_USB_BIT
 
 	_s32i.n a9, a11, GPIO_OFFSET_OUT
 
@@ -480,6 +487,14 @@ DEBUG_HIGH
 
 
 
+//############################################################################################
+//############################################################################################
+//############################################################################################
+//############################################################################################
+
+//Below this line is just notes and stuff.   It can safely be ignored.
+#if 0
+
 //This brainstorm was from way back in the beginning.  Mostly OBE now!
 
 /* Brainstorming... If we did ONE BIT per table pair...
@@ -508,7 +523,13 @@ DEBUG_HIGH
 		srli the running byte
 		increment table out place
 */
-
+.align 4
+my_test_data:
+	.byte 0xaa
+	.byte 0xaa
+	.byte 0xaa
+	.byte 0xaa
+	ret
 
 //This is my first set of test speed functions.  Just for fun.
 //This lets you test out and see how long code takes to execute in ccount's.
@@ -544,19 +565,19 @@ my_func:
 	_movi      a3, 0
 	//TODO: Find edge, set a5 to values on edge.
 
-	//_nop
-	//_nop.n
+	_nop
+	_nop.n
+
+	movi a4, my_test_data
+	//addi a4, a4, 1
 
 	movi a5, 0xa001
 	_movi a6, 1
 
 	_rsr a9, ccount
 
-
-	mul16u a7, a5, a6
-	bbsi a7, 0, skipper
-		_nop.n
-		_nop
+	_l32i a6, a14, 0
+	add a6, a7, a7
 	skipper:
 
 #if 0
@@ -740,4 +761,5 @@ rsr a11, ccount
 
 #endif
 
+#endif
 

@@ -3,6 +3,8 @@
 #include "usb.h"
 #include <string.h>
 #include <mystuff.h>
+#include <eagle_soc.h>
+#include <gpio.h>
 
 #ifdef USB_LOW_SPEED
 #include "usb_table_1bit.h"
@@ -351,3 +353,27 @@ void handle_ack( uint32_t this_token, struct usb_internal_state_struct * ist )
 }
 
 
+void  ICACHE_FLASH_ATTR init_usb()
+{
+    ETS_GPIO_INTR_DISABLE();                                           //Close the GPIO interrupt
+
+	PIN_FUNC_SELECT(PERIPHSDPLUS,FUNCDPLUS); //D- (needs pullup)
+	PIN_FUNC_SELECT(PERIPHSDMINUS,FUNCDMINUS); //D+
+
+    PIN_DIR_INPUT = _BV(DMINUS)|_BV(DPLUS);
+	PIN_PULLUP_DIS( PERIPHSDMINUS );
+	PIN_PULLUP_EN( PERIPHSDPLUS );
+
+    GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(0));
+    ETS_GPIO_INTR_ATTACH(gpio_intr,NULL);                                //Attach the gpio interrupt.
+    gpio_pin_intr_state_set(GPIO_ID_PIN(DMINUS),GPIO_PIN_INTR_POSEDGE);  //Rising Edge Trigger.
+
+	//Forcibly disconnect from bus.
+	volatile uint32_t * gp = (volatile uint32_t*)GPIO_BASE_REG;
+	gp[GPIO_OFFSET_CLEAR/4] = _BV(DPLUS) | _BV(DMINUS);
+	gp[GPIO_OFFSET_DIR_OUT/4] = _BV(DPLUS) | _BV(DMINUS);
+	ets_delay_us( 10000 );
+	gp[GPIO_OFFSET_DIR_IN/4] = _BV(DPLUS) | _BV(DMINUS);
+
+    ETS_GPIO_INTR_ENABLE();
+}

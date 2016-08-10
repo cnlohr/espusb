@@ -56,7 +56,7 @@ int PushMatch( const char * match )
 		int tries = 0;
 		for( tries = 0; tries < 10; tries++ )
 		{
-			usleep( 1000 );
+			usleep( 500 );
 
 			int r2 = libusb_control_transfer( devh,
 				0x80,    //reqtype  (0x80 = in, 0x00 = out)
