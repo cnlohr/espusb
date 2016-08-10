@@ -47,9 +47,7 @@ static void ICACHE_FLASH_ATTR procTask(os_event_t *events)
 {
 	CSTick( 0 );
 
-	//This is how you send mouse commands.
-	usb_internal_state.ep1data[1] = 1;
-	usb_internal_state.sendep1 = 1;
+
 
 //	ets_memcpy( usb_internal_state.user_control_in, usb_internal_state.user_control_out, usb_internal_state.user_control_out_length );
 //	usb_internal_state.user_control_in_length = usb_internal_state.user_control_out_length;
@@ -69,16 +67,37 @@ static void ICACHE_FLASH_ATTR procTask(os_event_t *events)
 
 //extern uint32_t usb_ramtable[31] __attribute__((aligned(16)));
 
+uint8_t my_ep1[4];
+uint8_t my_ep2[8];
+
 //Timer event.
 static void ICACHE_FLASH_ATTR myTimer(void *arg)
 {
 	int i;
-#if 0
-	printf( ":%d (%08x) ++  (%08x)(%08x)\n", usb_internal_state.packet_size, usb_internal_state.packet_size, usb_internal_state.debug, usb_ramtable[1]  );
-	for( i = 0; i < 16; i++ )
-		printf( "%02x ", usb_internal_state.usb_buffer[i] );
-	printf( "\n" );
-	PIN_OUT_CLEAR = _BV(5);
+
+	//Send mouse and keyboard commands
+	my_ep1[2] = 1;
+	my_ep2[2] ^= 8;
+
+	usb_internal_state.eps[1].ptr_in = my_ep1;
+	usb_internal_state.eps[2].ptr_in = my_ep2;
+
+	usb_internal_state.eps[1].size_in = sizeof( my_ep1 );
+	usb_internal_state.eps[2].size_in = sizeof( my_ep2 );
+
+	usb_internal_state.eps[1].place_in = 0;
+	usb_internal_state.eps[2].place_in = 0;
+
+	usb_internal_state.eps[1].send = 1;
+	usb_internal_state.eps[2].send = 1;
+
+
+#if 1
+	printf( "(%08x)(%08x)\n", usb_internal_state.debug, usb_internal_state.eps[0].size_in  );
+//	for( i = 0; i < 16; i++ )
+//		printf( "%02x ", usb_internal_state.usb_buffer[i] );
+//	printf( "\n" );
+//	PIN_OUT_CLEAR = _BV(5);
 #endif
 
 	CSTick( 1 );

@@ -41,13 +41,18 @@ static const uint8_t config_descriptor[] = {  //Mostly stolen from a USB mouse I
 	// configuration descriptor, USB spec 9.6.3, page 264-266, Table 9-10
 	9, 					// bLength;
 	2,					// bDescriptorType;
-	0x22, 0x00,			// wTotalLength
-	0x01,					// bNumInterfaces
+	0x3b, 0x00,			// wTotalLength  	
+
+	//34, 0x00, //for just the one descriptor
+	
+	0x01,					// bNumInterfaces (Normally 1)
 	0x01,					// bConfigurationValue
 	0x00,					// iConfiguration
-	0xa0,					// bmAttributes
-	100,					// bMaxPower (200mA)
+	0x80,					// bmAttributes (was 0xa0)
+	0x64,					// bMaxPower (200mA)
 
+
+	//Mouse
 	9,					// bLength
 	4,					// bDescriptorType
 	0,			// bInterfaceNumber (unused, would normally be used for HID)
@@ -55,30 +60,99 @@ static const uint8_t config_descriptor[] = {  //Mostly stolen from a USB mouse I
 	1,					// bNumEndpoints
 	0x03,					// bInterfaceClass (0x03 = HID)
 	0x01,					// bInterfaceSubClass
-	0x02,					// bInterfaceProtocol
+	0x02,					// bInterfaceProtocol (Mouse)
 	0,					// iInterface
 
 	9,					// bLength
 	0x21,					// bDescriptorType (HID)
-	0x10, 0x01, 0x00, 0x01, 0x22, 0x48, 0x00,
+	0x10,0x01,		//bcd 1.1
+	0x00, //country code
+	0x01, //Num descriptors
+	0x22, //DescriptorType[0] (HID)
+	0x48, 0x00, //Descriptor length XXX This looks wrong!!!
 
 	7, //endpoint descriptor (For endpoint 1)
 	0x05, //Endpoint Descriptor (Must be 5)
 	0x81, //Endpoint Address
 	0x03, //Attributes
 	0x04,	0x00, //Size
-	0x0a, //Interval (Was 0x0a)
+	0x07, //Interval (Was 0x0a)
+
+
+	//Keyboard  (It is unusual that this would be here)
+	9,					// bLength
+	4,					// bDescriptorType
+	1,			// bInterfaceNumber  = 1 instead of 0 -- well make it second.
+	0,					// bAlternateSetting
+	1,					// bNumEndpoints
+	0x03,					// bInterfaceClass (0x03 = HID)
+	0x01,					// bInterfaceSubClass
+	0x01,					// bInterfaceProtocol (??)
+	0,					// iInterface
+
+	9,					// bLength
+	0x21,					// bDescriptorType (HID)
+	0x10,0x01,		//bcd 1.1
+	0x00, //country code
+	0x01, //Num descriptors
+	0x22, //DescriptorType[0] (HID)
+	63, 0x00, //Descriptor length XXX This looks wrong!!!
+
+	7, //endpoint descriptor (For endpoint 1)
+	0x05, //Endpoint Descriptor (Must be 5)
+	0x82, //Endpoint Address
+	0x03, //Attributes
+	0x08,	0x00, //Size (8 bytes)
+	0x13, //Interval (Was 0x0a)
 };
 
 
 
-static const uint8_t mouse_hid_desc[] = {  //Mostly stolen from a USB mouse I found.
+
+static const uint8_t mouse_hid_desc[] = {  //Mostly stolen from a Microsoft USB mouse I found.
 	0x05, 0x01, 0x09, 0x02, 0xa1, 0x01, 0x09, 0x01, 0xa1, 0x00, 0x05, 0x09, 0x19, 0x01, 0x29, 0x03,
 	0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x03, 0x81, 0x02, 0x75, 0x05, 0x95, 0x01, 0x81, 0x01,
 	0x05, 0x01, 0x09, 0x30, 0x09, 0x31, 0x09, 0x38, 0x15, 0x81, 0x25, 0x7f, 0x75, 0x08, 0x95, 0x03,
 	0x81, 0x06, 0xc0, 0x05, 0xff, 0x09, 0x02, 0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x01, 0xb1,
 	0x22, 0x75, 0x07, 0x95, 0x01, 0xb1, 0x01, 0xc0, 
 };
+
+//From http://codeandlife.com/2012/06/18/usb-hid-keyboard-with-v-usb/
+static const uint8_t keyboard_hid_desc[63] = {   /* USB report descriptor */
+    0x05, 0x01,                    // USAGE_PAGE (Generic Desktop)
+    0x09, 0x06,                    // USAGE (Keyboard)
+    0xa1, 0x01,                    // COLLECTION (Application)
+    0x75, 0x01,                    //   REPORT_SIZE (1)
+    0x95, 0x08,                    //   REPORT_COUNT (8)
+    0x05, 0x07,                    //   USAGE_PAGE (Keyboard)(Key Codes)
+    0x19, 0xe0,                    //   USAGE_MINIMUM (Keyboard LeftControl)(224)
+    0x29, 0xe7,                    //   USAGE_MAXIMUM (Keyboard Right GUI)(231)
+    0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
+    0x25, 0x01,                    //   LOGICAL_MAXIMUM (1)
+    0x81, 0x02,                    //   INPUT (Data,Var,Abs) ; Modifier byte
+    0x95, 0x01,                    //   REPORT_COUNT (1)
+    0x75, 0x08,                    //   REPORT_SIZE (8)
+    0x81, 0x03,                    //   INPUT (Cnst,Var,Abs) ; Reserved byte
+    0x95, 0x05,                    //   REPORT_COUNT (5)
+    0x75, 0x01,                    //   REPORT_SIZE (1)
+    0x05, 0x08,                    //   USAGE_PAGE (LEDs)
+    0x19, 0x01,                    //   USAGE_MINIMUM (Num Lock)
+    0x29, 0x05,                    //   USAGE_MAXIMUM (Kana)
+    0x91, 0x02,                    //   OUTPUT (Data,Var,Abs) ; LED report
+    0x95, 0x01,                    //   REPORT_COUNT (1)
+    0x75, 0x03,                    //   REPORT_SIZE (3)
+    0x91, 0x03,                    //   OUTPUT (Cnst,Var,Abs) ; LED report padding
+    0x95, 0x06,                    //   REPORT_COUNT (6)
+    0x75, 0x08,                    //   REPORT_SIZE (8)
+    0x15, 0x00,                    //   LOGICAL_MINIMUM (0)
+    0x25, 0x65,                    //   LOGICAL_MAXIMUM (101)
+    0x05, 0x07,                    //   USAGE_PAGE (Keyboard)(Key Codes)
+    0x19, 0x00,                    //   USAGE_MINIMUM (Reserved (no event indicated))(0)
+    0x29, 0x65,                    //   USAGE_MAXIMUM (Keyboard Application)(101)
+    0x81, 0x00,                    //   INPUT (Data,Ary,Abs)
+    0xc0                           // END_COLLECTION
+};
+
 
 #define STR_MANUFACTURER L"CNLohr"
 #define STR_PRODUCT      L"ESPUSB"
@@ -122,7 +196,7 @@ const static struct descriptor_list_struct {
 	{0x0100, 0x0000, device_descriptor, sizeof(device_descriptor)},
 	{0x0200, 0x0000, config_descriptor, sizeof(config_descriptor)},
 	{0x2200, 0x0000, mouse_hid_desc, sizeof(mouse_hid_desc)},
-//	{0x2100, KEYBOARD_INTERFACE, config1_descriptor+KEYBOARD_HID_DESC_OFFSET, 9},
+	{0x2200, 0x0001, keyboard_hid_desc, sizeof(keyboard_hid_desc)},
 	{0x0300, 0x0000, (const uint8_t *)&string0, 4},
 	{0x0301, 0x0409, (const uint8_t *)&string1, sizeof(STR_MANUFACTURER)},
 	{0x0302, 0x0409, (const uint8_t *)&string2, sizeof(STR_PRODUCT)},	
@@ -131,17 +205,22 @@ const static struct descriptor_list_struct {
 #define DESCRIPTOR_LIST_ENTRIES ((sizeof(descriptor_list))/(sizeof(struct descriptor_list_struct)) )
 
 
-
+//Received a setup for a specific endpoint.
 void handle_setup( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
-	ist->usb_buffer_status = 2;
+	uint8_t addr = (this_token>>8) & 0x7f;
+	uint8_t endp = (this_token>>15) & 0xf;
+
+	if( endp >= ENDPOINTS ) goto end;
+	if( addr != 0 && addr != ist->my_address ) goto end;  //XXX TODO: Is my_address per endpoint?s
+
+	struct usb_endpoint * e = ist->ce = &ist->eps[endp];
+	e->toggle_out = 0;
+	e->toggle_in = 1;
+	e->ptr_in = 0;
+	e->send = 0;
 	ist->setup_request = 1;
-
-	//XXX TODO: Check device_address against address in this token.
-
-	//If we get an "setup" token, we have to strike any accept buffers.
-	ist->usb_bufferaccept = 0;
-
+end:
 	__asm__ __volatile__( "movi a0, usb_reinstate" ); //After this token, we are immediately expecting another grouping.  This short-circuits the 'return'.
 }
 
@@ -151,14 +230,18 @@ void handle_sof( uint32_t this_token, struct usb_internal_state_struct * ist )
 
 void PerpetuatePacket( struct usb_internal_state_struct * ist )
 {
-	if( ist->usb_bufferret )
+	struct usb_endpoint * e = ist->ce;
+	if( !e ) return;
+	if( e->ptr_in )
 	{
-		int tosend = ist->usb_bufferret_len;
+		int tosend = e->size_in - e->place_in;
+
 		if( tosend > 8 ) tosend = 8;
 
 		uint8_t sendnow[12];
 		sendnow[0] = 0x80;
-		if( ist->usb_buffer_status & 0x02 )
+
+		if( e->toggle_in )
 		{
 			sendnow[1] = 0b01001011; //DATA1
 		}
@@ -167,18 +250,17 @@ void PerpetuatePacket( struct usb_internal_state_struct * ist )
 			sendnow[1] = 0b11000011; //DATA0
 		}
 
-		if( ist->usb_bufferret == (uint8_t*)1 )  //Tricky: Empty packet.
+		if( e->ptr_in == EMPTY_SEND_BUFFER )  //Tricky: Empty packet.
 		{
 			usb_send_data( sendnow, 2, 3 );  //Force a CRC
-			ist->usb_bufferret = 0;
-			ist->usb_bufferret_len = 0;
+			e->ptr_in = 0;
 		}
 		else
 		{
 			if( tosend )
-				ets_memcpy( sendnow+2, ist->usb_bufferret, tosend );
+				ets_memcpy( sendnow+2, e->ptr_in + e->place_in, tosend );
 			usb_send_data( sendnow, tosend+2, 0 );
-			ist->last_sent_qty = tosend;
+			e->advance_in = tosend;
 		}
 	}
 }
@@ -189,31 +271,36 @@ void handle_in( uint32_t this_token, struct usb_internal_state_struct * ist )
 	uint8_t endp = (this_token>>15) & 0xf;
 
 	//If we get an "in" token, we have to strike any accept buffers.
-	ist->usb_bufferaccept = 0;
 
-	if( endp == 0x1 && addr == ist->my_address )
+	if( endp >= ENDPOINTS ) return;
+	if( addr != 0 && addr != ist->my_address ) return; //XXX TODO: is my_address per-endpoint?
+
+	struct usb_endpoint * e = ist->ce = &ist->eps[endp];
+
+	e->got_size_out = 0;  //Cancel any out transaction
+
+
+	//XXX TODO: The following is wrong, for some reason e->size_in == e->place_in even if data is in there, I think!!!
+	// /* && ( e->size_in - e->place_in > 0 )*/ ) // || ( endp == 0 && ist->setup_request ) )  //XXX I think this is wrong.  e->send?
+	if( e->send && e->ptr_in ) 
 	{
-		if( ist->sendep1 )
-		{
-			ist->usb_bufferret = ist->ep1data;
-			ist->usb_bufferret_len = sizeof( ist->ep1data );
-			ist->sendep1 = 0;
-		}
-		else
-		{
-			uint8_t sendword[2] = { 0x80, 0xD2 };  //Empty data.
-			usb_send_data( sendword, 2, 2 );
-		}
+		PerpetuatePacket( ist );
+		return;
+	}
+	else
+	{
+		volatile int i;
+		for( i = 0; i < 10; i++ );
+		uint8_t sendword[2] = { 0x80, 0x5a };  //Empty data. "NAK"
+		usb_send_data( sendword, 2, 2 );
+		return;
 	}
 
-	//TODO: Need to handle saying "nah, we're good!" if we're good.
-	//00688a69
-	PerpetuatePacket( ist );
 }
 
 void handle_out( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
-	//I ... uuhh... I don't think we need to do anything here, unless we're accepting interrupt_in data.
+	//I ... uuhh... I don't think we need to do anything here, unless we're accepting interrupt_in data?
 
 	__asm__ __volatile__( "movi a0, usb_reinstate" );  //After this token, we are immediately expecting another grouping.  This short-circuits the 'return'.
 }
@@ -221,49 +308,28 @@ void handle_out( uint32_t this_token, struct usb_internal_state_struct * ist )
 void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, uint32_t which_data )
 {
 	//Received data from host.
-	//First, check to make sure this is the right data.
-//	if( ist->packet_size < 4 ) return;
 
-	//XXX TODO: Check to see if it is of nonzero length?
-	if( (ist->usb_buffer_status&1) != which_data )
+	struct usb_endpoint * e = ist->ce;
+
+	if( e == 0 ) return;
+
+	if( e->toggle_out != which_data )
 	{
 		goto just_ack;
 	}
 
-	ist->usb_buffer_status ^= 1; //Expect opposite DATA command next.
-
-	if( ist->usb_bufferaccept )  //For accepting data from endpoints and control out messages.
-	{
-		int acc = ist->packet_size-3;  //packet_size includes CRC and PID
-		ist->debug = ist->packet_size;
-
-		if( acc > ist->accept_length )
-		{
-			acc = ist->accept_length;
-		}
-
-		ets_memcpy( ist->usb_bufferaccept, ist->usb_buffer+1, acc );  //First byte of USB buffer is token.
-		ist->accept_length -= acc;
-		ist->usb_bufferaccept += acc;
-
-		if( ist->accept_length == 0 )
-		{
-			ist->user_control_length_acc = ist->usb_bufferaccept - ist->user_control;
-			ist->usb_bufferaccept = 0;
-		}
-	}
+	e->toggle_out = !e->toggle_out;
 
 	if( ist->setup_request )
 	{
 		ist->setup_request = 0;
 		struct usb_urb * s = (struct usb_urb *)ist->usb_buffer;
-		//Flip endian on wValue and wLength.  Consider wIndex.
-		//s->wValue = ((s->wValue)>>8) | ((s->wValue&0xff)<<8);
-		//s->wLength = ((s->wLength)>>8) | ((s->wLength&0xff)<<8);
 
 		//Send just a data packet.
-		ist->usb_bufferret = (uint8_t*)1;
-		ist->usb_bufferret_len = 0;
+		e->ptr_in = EMPTY_SEND_BUFFER;
+		e->place_in = 0;
+		e->size_in = 0;
+		e->send = 1;
 
 		if( s->bmRequestType & 0x80 )
 		{
@@ -284,10 +350,9 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 					goto just_ack;
 				}
 
-
-				ist->usb_bufferret = dl->addr;
-				ist->usb_bufferret_len = dl->length;
-				if( s->wLength < ist->usb_bufferret_len ) ist->usb_bufferret_len = s->wLength;
+				e->ptr_in = dl->addr;
+				e->size_in = dl->length;
+				if( s->wLength < e->size_in ) e->size_in = s->wLength;
 			}
 
 			/////////////////////////////EXAMPLE CUSTOM CONTROL MESSAGE/////////////////////////////
@@ -295,9 +360,9 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 			{
 				if( ist->user_control_length_ret )
 				{					
-					ist->usb_bufferret = ist->user_control;
-					ist->usb_bufferret_len = ist->user_control_length_ret;
-					if( s->wLength < ist->usb_bufferret_len ) ist->usb_bufferret_len = s->wLength;
+					e->ptr_in = ist->user_control;
+					e->size_in = ist->user_control_length_ret;
+					if( s->wLength < e->size_in ) e->size_in = s->wLength;
 					ist->user_control_length_ret = 0;
 				}
 			}
@@ -316,13 +381,25 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 			/////////////////////////////EXAMPLE CUSTOM CONTROL MESSAGE/////////////////////////////
 			if( s->bRequest == 0xa6 && ist->user_control_length_acc == 0 ) //HOST TO US "out"
 			{
-				ist->usb_bufferaccept = ist->user_control;
-
-				ist->accept_length = sizeof( ist->user_control );
-				if( s->wLength < ist->accept_length )
-					ist->accept_length = s->wLength;
+				e->ptr_out = ist->user_control;
+				e->max_size_out = sizeof( ist->user_control );
+				if( e->max_size_out > s->wLength ) e->max_size_out = s->wLength;
+				e->got_size_out = 0;
 			}
 		}
+	}
+	else if( e->ptr_out )
+	{
+		//Read into that buffer.
+		int acc = ist->packet_size-3;  //packet_size includes CRC and PID, need just data size.
+		int place = e->got_size_out;
+		if( place + acc > e->max_size_out )
+		{
+			acc = e->max_size_out - place;
+		}
+
+		ets_memcpy( e->ptr_out + e->got_size_out, ist->usb_buffer+1, acc );  //First byte of USB buffer is token.
+		e->got_size_out += acc;
 	}
 
 
@@ -336,20 +413,18 @@ just_ack:
 
 void handle_ack( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
-	ist->usb_buffer_status ^= 2;  //Invert next "DATAx" to host.
+	struct usb_endpoint * e = ist->ce;
+	if( !e ) return;
 
-	if( ist->usb_bufferret > (uint8_t*)1 )
+
+	e->toggle_in = !e->toggle_in;
+	e->place_in += e->advance_in;
+	if( e->place_in == e->size_in )
 	{
-		ist->usb_bufferret_len -= ist->last_sent_qty;
-		if( ist->usb_bufferret_len == 0 )
-			ist->usb_bufferret = 0;
-		else
-			ist->usb_bufferret += ist->last_sent_qty;
+		e->send = 0;
 	}
-
+	
 	ist->last_sent_qty = 0;
-
-//	PerpetuatePacket( ist );
 }
 
 
@@ -376,4 +451,5 @@ void  ICACHE_FLASH_ATTR init_usb()
 	gp[GPIO_OFFSET_DIR_IN/4] = _BV(DPLUS) | _BV(DMINUS);
 
     ETS_GPIO_INTR_ENABLE();
+
 }

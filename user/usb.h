@@ -9,6 +9,8 @@
 #define DMINUS 12
 #define DMINUSBASE 12  //Must be D- first, then D+ second.
 
+#define ENDPOINTS 3
+
 #define PERIPHSDPLUS    PERIPHS_IO_MUX_MTDI_U
 #define PERIPHSDMINUS   PERIPHS_IO_MUX_MTCK_U
 #define FUNCDPLUS  FUNC_GPIO13
@@ -26,37 +28,65 @@
 #ifndef _INASM_
 #include <c_types.h>
 
+#define EMPTY_SEND_BUFFER (uint8_t*)1
+
+struct usb_endpoint
+{
+	const uint8_t * ptr_in;		// Pointer to "IN" data (US->PC)
+	uint8_t size_in;		// Total size of the structure pointed to by ptr_in
+	uint8_t advance_in;		// How much data was sent this packet? (How much to advance in ack)
+	uint8_t place_in;		// Where in the ptr_in we are currently pointing.
+	uint8_t toggle_in; 		// DATA0 or DATA1?
+	uint8_t send;			// Sets back to 0 when done sending.
+
+	uint8_t * ptr_out;
+	uint8_t max_size_out;
+	uint8_t toggle_out;  //Out PC->US
+	uint8_t got_size_out;
+};
+
 struct usb_internal_state_struct
 {
 	//This data is modified by the super low-level code.
 
 	uint8_t usb_buffer[USB_BUFFERSIZE];
 
-	//Bit 0: Unused
-	//Bit 1: Next we sent to host. DATA0 = 0, DATA1 = 1
-	uint32_t usb_buffer_status;
+	//Bit 0: Toggle from host on EP0?
+	//uint32_t usb_buffer_status;
+
 	uint32_t packet_size; //Of data currently in usb_buffer
 	uint32_t last_token;
 	uint32_t debug;
 
 
+	struct usb_endpoint * ce;  //Current endpoint
+	struct usb_endpoint eps[ENDPOINTS];
 
 	//Things past here are addressable by C.
 
 	uint32_t my_address;
 	uint32_t setup_request; //1 if needing setup packet.
 
-	const uint8_t  * usb_bufferret;
-	uint32_t   usb_bufferret_len;
+	//Current transmission from us to host.
+//	const uint8_t  * usb_bufferret;
+//	uint32_t   usb_bufferret_len;
+
 	int last_sent_qty;
 
+	//TODO: make an endpoint struct for handling this...
+/*	int   *  eptoggle;
+	int   *  marksentptr;
 	uint8_t ep1data[4];
 	int     sendep1;
-
+	int     ep1toggle;
+	uint8_t ep3data[8];
+	int     sendep3;
+	int     ep3toggle;
+*/
 
 	//Awkward example with use of control messages to get data to/from device.
-	uint8_t * usb_bufferaccept;
-	uint32_t  accept_length;
+	//uint8_t * usb_bufferaccept;
+	//uint32_t  accept_length;
 
 	uint8_t user_control[150];
 	int     user_control_length_acc; //From host to us.
