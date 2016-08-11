@@ -2,7 +2,7 @@
 
 WARNING: THIS PROJECT IS A WORK IN PROGRESS.  DO NOT EXPECT IT TO WORK WELL.
 
-TODO: Continue.
+Forum for discussion of development: http://www.esp8266.com/espusb
 
 
 I wanted to have USB on the ESP8266, and a while ago I saw on the ESP32 flier, it read: "Rich Peripherals" ... "Sorry, no USB!" I thought to myself, that is ridiculous.  Of course there's USB.
