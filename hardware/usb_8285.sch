@@ -159,7 +159,7 @@ $Descr USLetter 11000 8500
 encoding utf-8
 Sheet 1 1
 Title "noname.sch"
-Date "8 aug 2016"
+Date "15 aug 2016"
 Rev "-"
 Comp ""
 Comment1 ""
@@ -822,17 +822,6 @@ F 3 "" H 5550 3700 60  0000 C CNN
 	1    5550 3700
 	0    1    1    0   
 $EndComp
-$Comp
-L GND #PWR031
-U 1 1 57A8F688
-P 6750 2200
-F 0 "#PWR031" H 6750 2200 30  0001 C CNN
-F 1 "GND" H 6750 2130 30  0001 C CNN
-F 2 "" H 6750 2200 60  0000 C CNN
-F 3 "" H 6750 2200 60  0000 C CNN
-	1    6750 2200
-	0    -1   -1   0   
-$EndComp
 Wire Wire Line
 	4900 3400 5400 3400
 Wire Wire Line
@@ -840,4 +829,26 @@ Wire Wire Line
 Connection ~ 4900 3400
 Text Label 5050 3400 0    59   ~ 0
 D-
+$Comp
+L CONN_1 P10
+U 1 1 57B2119E
+P 3000 2700
+F 0 "P10" H 3080 2700 40  0000 L CNN
+F 1 "ADC" H 3000 2755 30  0001 C CNN
+F 2 ".1SMTPIN" H 3000 2700 60  0000 C CNN
+F 3 "" H 3000 2700 60  0000 C CNN
+	1    3000 2700
+	0    1    1    0   
+$EndComp
+$Comp
+L +3.3V #PWR031
+U 1 1 57B211DF
+P 6750 2200
+F 0 "#PWR031" H 6750 2160 30  0001 C CNN
+F 1 "+3.3V" H 6750 2310 30  0000 C CNN
+F 2 "" H 6750 2200 60  0000 C CNN
+F 3 "" H 6750 2200 60  0000 C CNN
+	1    6750 2200
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
