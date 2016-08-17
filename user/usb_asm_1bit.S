@@ -23,9 +23,13 @@
 #include "usb_table_1bit.h"
 
 
+#if 1
 #define DEBUG_HIGH    _s32i.n	a13, a11, GPIO_OFFSET_SET
 #define DEBUG_LOW     _s32i.n	a13, a11, GPIO_OFFSET_CLEAR
-
+#else
+#define DEBUG_HIGH
+#define DEBUG_LOW
+#endif
 
 //				8 works, 9 is spotty at best.
 //				-26 works, 27 is spotty at best.
@@ -127,6 +131,7 @@ find_low:	//Once we find it high, we need to look for the falling edge so we can
 	j end_gpio_intr
 done_low:
 
+
 	movi a10, 0
 	_rsr a15, ccount
 
@@ -183,6 +188,7 @@ looper:
 			movi.n		a12, CRC5_POLY
 			movi.n		a3, CRC5_INITIAL			
 	write_cont:
+		//TODO: Should we make sure we don't run off the end of the buffer?
 		_s8i a7, a8, USB_OFFSET_BUFFER
 		_addi a8, a8, 1
 		_addi a2, a2, -8
@@ -313,9 +319,9 @@ usb_send_data:            //A2 = pointer to data  //A3 = length of data,, A4  = 
 	_l32i.n a5, a11, GPIO_OFFSET_OUT
 	and a0, a5, a0
 
-	movi a8, (1<<DMINUSBASE)
+	movi a8, (2<<DMINUSBASE)		//WARNING: If flipping D- and D+ this must be updated.
 	or a8, a0, a8
-	movi a9, (2<<DMINUSBASE)
+	movi a9, (1<<DMINUSBASE)
 	or a9, a0, a9	
 
 	_s32i.n a9, a11, GPIO_OFFSET_OUT

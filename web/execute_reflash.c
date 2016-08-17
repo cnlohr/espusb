@@ -31,15 +31,26 @@ int SendData( uint8_t * buffer, int len )
 {
 	if( use_usb )
 	{
-		int r1 = libusb_control_transfer( devh,
+		int tries = 0;
+		int r1;
+retry:
+		r1 = libusb_control_transfer( devh,
 			0x00,    //reqtype  (0x80 = Device->PC, 0x00 = PC->Device)
 			0xA6,    //request
 			0x0100,  //wValue
 			0x0000,  //wIndex
 			buffer, 
 			len,     //wLength  (more like max length)
-			1000 );
-		//printf( "Sent: %d/%d   %c%c", r1, len, buffer[0], buffer[1] );
+			100 );
+		if( r1 != len )
+		{
+			printf( "X" ); fflush( stdout );
+			tries++;
+			if( tries < 10 )
+				goto retry;
+		}
+		return r1;
+		//printf( "((Sent: %d/%d   %c%c))", r1, len, buffer[0], buffer[1] );
 	}
 	else
 	{
@@ -65,7 +76,7 @@ int PushMatch( const char * match )
 				0x0000,  //wIndex
 				recvline, //wLength  (more like max length)
 				128,
-				1000 );
+				100 );
 
 			if( r2 < 0 ) continue;
 
@@ -76,7 +87,7 @@ int PushMatch( const char * match )
 				return 0;
 			}
 
-			usleep( 20000 );
+			usleep( 1000 );
 		}
 		return 1;
 	}
@@ -156,10 +167,10 @@ uint32_t Push( uint32_t offset, const char * file )
 			{
 				char match[75];
 				//printf( "Erase: %d\n", block );
-				printf( "E" ); fflush( stdout );
+				printf( "B" ); fflush( stdout );
 				SendData(  se, sel );
+				usleep(130000); //Sleep a while when erasing blocks.
 				sprintf( match, "FB%d", block );
-
 				if( PushMatch(match) == 0 ) { thissuccess = 1; break; }
 				printf( "Retry.\n" );
 			}
@@ -174,6 +185,7 @@ uint32_t Push( uint32_t offset, const char * file )
 
 		
 		int r = sprintf( bufferout, "FW%d\t%d\t", sendplace, sendsize );
+		//printf( "FW: %d\n", sendplace );
 		memcpy( bufferout + r, buffer, sendsize ); 
 
 		//printf( "bufferout: %d %d\n", sendplace, sendsize );

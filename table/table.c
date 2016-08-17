@@ -99,7 +99,7 @@ void Init()
 			if( last_state == dp )
 			{
 				//End of preamble.
-				if( dp == 0 )
+				if( dp == 1 )
 				{
 					//Good
 					ones_count = 0;

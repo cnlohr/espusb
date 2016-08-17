@@ -30,7 +30,7 @@ static const uint8_t device_descriptor[] = {
 	0x08, //Max packet size for EP0 (This has to be 8 because of the USB Low-Speed Standard)
 	0xcd, 0xab, //ID Vendor
 	0x66, 0x82, //ID Product
-	0x01, 0x00, //ID Rev
+	0x02, 0x00, //ID Rev
 	1, //Manufacturer string
 	2, //Product string
 	0, //Serial string
@@ -45,7 +45,7 @@ static const uint8_t config_descriptor[] = {  //Mostly stolen from a USB mouse I
 
 	//34, 0x00, //for just the one descriptor
 	
-	0x01,					// bNumInterfaces (Normally 1)
+	0x02,					// bNumInterfaces (Normally 1)
 	0x01,					// bConfigurationValue
 	0x00,					// iConfiguration
 	0x80,					// bmAttributes (was 0xa0)
@@ -69,7 +69,7 @@ static const uint8_t config_descriptor[] = {  //Mostly stolen from a USB mouse I
 	0x00, //country code
 	0x01, //Num descriptors
 	0x22, //DescriptorType[0] (HID)
-	0x48, 0x00, //Descriptor length XXX This looks wrong!!!
+	52, 0x00, //Descriptor length XXX This looks wrong!!!
 
 	7, //endpoint descriptor (For endpoint 1)
 	0x05, //Endpoint Descriptor (Must be 5)
@@ -109,12 +109,34 @@ static const uint8_t config_descriptor[] = {  //Mostly stolen from a USB mouse I
 
 
 
-static const uint8_t mouse_hid_desc[] = {  //Mostly stolen from a Microsoft USB mouse I found.
-	0x05, 0x01, 0x09, 0x02, 0xa1, 0x01, 0x09, 0x01, 0xa1, 0x00, 0x05, 0x09, 0x19, 0x01, 0x29, 0x03,
-	0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x03, 0x81, 0x02, 0x75, 0x05, 0x95, 0x01, 0x81, 0x01,
-	0x05, 0x01, 0x09, 0x30, 0x09, 0x31, 0x09, 0x38, 0x15, 0x81, 0x25, 0x7f, 0x75, 0x08, 0x95, 0x03,
-	0x81, 0x06, 0xc0, 0x05, 0xff, 0x09, 0x02, 0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x01, 0xb1,
-	0x22, 0x75, 0x07, 0x95, 0x01, 0xb1, 0x01, 0xc0, 
+static const uint8_t mouse_hid_desc[52] = {  //From http://eleccelerator.com/tutorial-about-usb-hid-report-descriptors/
+	0x05, 0x01,                    // USAGE_PAGE (Generic Desktop)
+	0x09, 0x02,                    // USAGE (Mouse)
+	0xa1, 0x01,                    // COLLECTION (Application)
+	0x09, 0x01,                    //   USAGE (Pointer)
+	0xa1, 0x00,                    //   COLLECTION (Physical)
+	0x05, 0x09,                    //     USAGE_PAGE (Button)
+	0x19, 0x01,                    //     USAGE_MINIMUM (Button 1)
+	0x29, 0x03,                    //     USAGE_MAXIMUM (Button 3)
+	0x15, 0x00,                    //     LOGICAL_MINIMUM (0)
+	0x25, 0x01,                    //     LOGICAL_MAXIMUM (1)
+	0x95, 0x03,                    //     REPORT_COUNT (3)
+	0x75, 0x01,                    //     REPORT_SIZE (1)
+	0x81, 0x02,                    //     INPUT (Data,Var,Abs)
+	0x95, 0x01,                    //     REPORT_COUNT (1)
+	0x75, 0x05,                    //     REPORT_SIZE (5)
+	0x81, 0x03,                    //     INPUT (Cnst,Var,Abs)
+	0x05, 0x01,                    //     USAGE_PAGE (Generic Desktop)
+	0x09, 0x30,                    //     USAGE (X)
+	0x09, 0x31,                    //     USAGE (Y)
+	0x09, 0x38,                    //     USAGE (Y)
+	0x15, 0x81,                    //     LOGICAL_MINIMUM (-127)
+	0x25, 0x7f,                    //     LOGICAL_MAXIMUM (127)
+	0x75, 0x08,                    //     REPORT_SIZE (8)
+	0x95, 0x03,                    //     REPORT_COUNT (3)
+	0x81, 0x06,                    //     INPUT (Data,Var,Rel)
+	0xc0,                          //   END_COLLECTION
+	0xc0                           // END_COLLECTIONs
 };
 
 //From http://codeandlife.com/2012/06/18/usb-hid-keyboard-with-v-usb/
@@ -153,9 +175,11 @@ static const uint8_t keyboard_hid_desc[63] = {   /* USB report descriptor */
     0xc0                           // END_COLLECTION
 };
 
+//Ever wonder how you have more than 6 keys down at the same time on a USB keyboard?  It's easy. Enumerate two keyboards!
+
 
 #define STR_MANUFACTURER L"CNLohr"
-#define STR_PRODUCT      L"ESPUSB"
+#define STR_PRODUCT      L"ESPUSB2"
 #define STR_SERIAL       L"000"
 
 struct usb_string_descriptor_struct {
@@ -300,7 +324,13 @@ void handle_in( uint32_t this_token, struct usb_internal_state_struct * ist )
 
 void handle_out( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
-	//I ... uuhh... I don't think we need to do anything here, unless we're accepting interrupt_in data?
+	//We need to handle this here because we could have an interrupt in the middle of a control or bulk transfer.
+	//This will correctly swap back the endpoint.
+	uint8_t addr = (this_token>>8) & 0x7f;
+	uint8_t endp = (this_token>>15) & 0xf;
+	if( endp >= ENDPOINTS ) return;
+	if( addr != 0 && addr != ist->my_address ) return; //XXX TODO: is my_address per-endpoint?
+	struct usb_endpoint * e = ist->ce = &ist->eps[endp];
 
 	__asm__ __volatile__( "movi a0, usb_reinstate" );  //After this token, we are immediately expecting another grouping.  This short-circuits the 'return'.
 }
@@ -359,7 +389,7 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 			if(s->bRequest == 0xa7 ) //US TO HOST "in"
 			{
 				if( ist->user_control_length_ret )
-				{					
+				{
 					e->ptr_in = ist->user_control;
 					e->size_in = ist->user_control_length_ret;
 					if( s->wLength < e->size_in ) e->size_in = s->wLength;
@@ -385,6 +415,7 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 				e->max_size_out = sizeof( ist->user_control );
 				if( e->max_size_out > s->wLength ) e->max_size_out = s->wLength;
 				e->got_size_out = 0;
+				e->transfer_done_ptr = &ist->user_control_length_acc;
 			}
 		}
 	}
@@ -393,6 +424,7 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 		//Read into that buffer.
 		int acc = ist->packet_size-3;  //packet_size includes CRC and PID, need just data size.
 		int place = e->got_size_out;
+
 		if( place + acc > e->max_size_out )
 		{
 			acc = e->max_size_out - place;
@@ -400,6 +432,11 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 
 		ets_memcpy( e->ptr_out + e->got_size_out, ist->usb_buffer+1, acc );  //First byte of USB buffer is token.
 		e->got_size_out += acc;
+		if( e->got_size_out == e->max_size_out && e->transfer_done_ptr ) {
+			e->ptr_out = 0;
+			*e->transfer_done_ptr = e->got_size_out;
+			e->transfer_done_ptr = 0;
+		}
 	}
 
 
@@ -436,12 +473,12 @@ void  ICACHE_FLASH_ATTR init_usb()
 	PIN_FUNC_SELECT(PERIPHSDMINUS,FUNCDMINUS); //D+
 
     PIN_DIR_INPUT = _BV(DMINUS)|_BV(DPLUS);
-	PIN_PULLUP_DIS( PERIPHSDMINUS );
-	PIN_PULLUP_EN( PERIPHSDPLUS );
+	PIN_PULLUP_EN( PERIPHSDMINUS );
+	PIN_PULLUP_DIS( PERIPHSDPLUS );
 
     GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(0));
     ETS_GPIO_INTR_ATTACH(gpio_intr,NULL);                                //Attach the gpio interrupt.
-    gpio_pin_intr_state_set(GPIO_ID_PIN(DMINUS),GPIO_PIN_INTR_POSEDGE);  //Rising Edge Trigger.
+    gpio_pin_intr_state_set(GPIO_ID_PIN(DPLUS),GPIO_PIN_INTR_POSEDGE);  //Rising Edge Trigger.
 
 	//Forcibly disconnect from bus.
 	volatile uint32_t * gp = (volatile uint32_t*)GPIO_BASE_REG;

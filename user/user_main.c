@@ -69,6 +69,7 @@ static void ICACHE_FLASH_ATTR procTask(os_event_t *events)
 
 uint8_t my_ep1[4];
 uint8_t my_ep2[8];
+extern uint32_t usb_ramtable[31];
 
 //Timer event.
 static void ICACHE_FLASH_ATTR myTimer(void *arg)
@@ -77,7 +78,7 @@ static void ICACHE_FLASH_ATTR myTimer(void *arg)
 
 	//Send mouse and keyboard commands
 	my_ep1[2] = 1;
-	my_ep2[2] ^= 8;
+//	my_ep2[2] ^= 8;  //Keyboard
 
 	usb_internal_state.eps[1].ptr_in = my_ep1;
 	usb_internal_state.eps[2].ptr_in = my_ep2;
@@ -92,8 +93,8 @@ static void ICACHE_FLASH_ATTR myTimer(void *arg)
 	usb_internal_state.eps[2].send = 1;
 
 
-#if 1
-	printf( "(%08x)(%08x)\n", usb_internal_state.debug, usb_internal_state.eps[0].size_in  );
+#if 0
+	printf( "(%08x)(%08x)(%08x)\n", usb_ramtable[1], usb_internal_state.debug, usb_internal_state.eps[0].size_in  );
 //	for( i = 0; i < 16; i++ )
 //		printf( "%02x ", usb_internal_state.usb_buffer[i] );
 //	printf( "\n" );
@@ -161,9 +162,9 @@ end:\n\
 void user_init(void)
 {
 	uart_init(BIT_RATE_115200, BIT_RATE_115200);
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U,FUNC_GPIO5);
-    PIN_DIR_OUTPUT = _BV(5);
-	PIN_OUT_SET = _BV(5);
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U,FUNC_GPIO2);
+    PIN_DIR_OUTPUT = _BV(2);
+	PIN_OUT_SET = _BV(2);
 
 	//ets_delay_us(200000);
 	//uart0_sendStr("\r\n\033c" );

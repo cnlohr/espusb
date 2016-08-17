@@ -3,27 +3,27 @@
 
 #define USB_LOW_SPEED
 //#define USB_FULL_SPEED  (Not implemented)
-#define DEBUGPIN 5
+#define DEBUGPIN 2
 
-#define DPLUS 13
-#define DMINUS 12
-#define DMINUSBASE 12  //Must be D- first, then D+ second.
+#define DPLUS 5
+#define DMINUS 4
+#define DMINUSBASE 4  //Must be D- first, then D+ second.
 
 #define ENDPOINTS 3
 
-#define PERIPHSDPLUS    PERIPHS_IO_MUX_MTDI_U
-#define PERIPHSDMINUS   PERIPHS_IO_MUX_MTCK_U
-#define FUNCDPLUS  FUNC_GPIO13
-#define FUNCDMINUS FUNC_GPIO12
+#define PERIPHSDPLUS    PERIPHS_IO_MUX_GPIO5_U
+#define PERIPHSDMINUS   PERIPHS_IO_MUX_GPIO4_U
+#define FUNCDPLUS  FUNC_GPIO5
+#define FUNCDMINUS FUNC_GPIO4
 
 
 #define USB_BUFFERSIZE 16  //Must be big enough to hold PID + DATA + EOF (plus a bit just in case)
 
 #define USB_OFFSET_BUFFER		0
 #define USB_OFFSET_DSTATUS		(USB_BUFFERSIZE)
-#define USB_OFFSET_PACKET_SIZE  (USB_OFFSET_DSTATUS+4)
-#define USB_OFFSET_LAST_TOKEN   (USB_OFFSET_DSTATUS+8)
-#define USB_OFFSET_DEBUG        (USB_OFFSET_DSTATUS+12)
+#define USB_OFFSET_PACKET_SIZE  (USB_OFFSET_DSTATUS)
+#define USB_OFFSET_LAST_TOKEN   (USB_OFFSET_DSTATUS+4)
+#define USB_OFFSET_DEBUG        (USB_OFFSET_DSTATUS+8)
 
 #ifndef _INASM_
 #include <c_types.h>
@@ -40,6 +40,7 @@ struct usb_endpoint
 	uint8_t send;			// Sets back to 0 when done sending.
 
 	uint8_t * ptr_out;
+	int * transfer_done_ptr;  //Written to # of bytes received when a datagram is done.
 	uint8_t max_size_out;
 	uint8_t toggle_out;  //Out PC->US
 	uint8_t got_size_out;
@@ -50,9 +51,6 @@ struct usb_internal_state_struct
 	//This data is modified by the super low-level code.
 
 	uint8_t usb_buffer[USB_BUFFERSIZE];
-
-	//Bit 0: Toggle from host on EP0?
-	//uint32_t usb_buffer_status;
 
 	uint32_t packet_size; //Of data currently in usb_buffer
 	uint32_t last_token;
