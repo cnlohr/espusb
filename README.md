@@ -20,8 +20,11 @@ This is typical memory usage for a two-endpoint (in addition to EP0) device.
 
 In summary:
 
-Total SRAM: 232 bytes
+Total SRAM: 232 bytes + Descriptors (~317 bytes)
+
 Total Flash/IRAM (Only iram, tables and usb_init can be stuck in slow flash): 1422 bytes
+
+
 
 More details:
 
