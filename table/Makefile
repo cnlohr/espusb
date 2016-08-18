@@ -1,10 +1,8 @@
-all : table table2x
+all : table
 
 table : table.c
 	gcc -o $@ $^
-
-table2x : table2x.c
-	gcc -o $@ $^
+	./table
 
 clean :
-	rm -rf *.o *~ table table2x
+	rm -rf *.o *~ table

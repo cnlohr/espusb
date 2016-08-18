@@ -278,15 +278,16 @@ uint16_t crc5=0x1f;
 	fprintf( f, "#define NEED_CONSTANTS\n\n" );
 	fprintf( f, "#include \"usb.h\"\n\n" );
 
-	fprintf( f, "#define TABLE_OFFSET 60\n\n" );
+	fprintf( f, "#define TABLE_OFFSET 36\n\n" );
+
 	fprintf( f, "#define GPIO_BASE_OFFSET 0\n" );
-	fprintf( f, "#define LOOP_COUNT_OFFSET 12\n" );
-	fprintf( f, "#define ANDING_MASK_OFFSET 24\n" );
-	fprintf( f, "#define RUNNING_TIMEOUT_OFFSET  28\n" );
-	fprintf( f, "#define USB_INTERNAL_STATE_OFFSET  32\n" );
-	fprintf( f, "#define CRC16_INIT_OFFSET 40\n" );
-	fprintf( f, "#define CRC16_POLY_OFFSET 44\n" );
-	fprintf( f, "#define CRC16_CHECK_OFFSET 48\n" );
+	fprintf( f, "#define LOOP_COUNT_OFFSET 8\n" );
+	fprintf( f, "#define ANDING_MASK_OFFSET 12\n" );
+	fprintf( f, "#define RUNNING_TIMEOUT_OFFSET  16\n" );
+	fprintf( f, "#define USB_INTERNAL_STATE_OFFSET  20\n" );
+	fprintf( f, "#define CRC16_INIT_OFFSET 24\n" );
+	fprintf( f, "#define CRC16_POLY_OFFSET 28\n" );
+	fprintf( f, "#define CRC16_CHECK_OFFSET 32\n" );
 	fprintf( f, "#define CRC5_INITIAL 0x1f\n" );
 	fprintf( f, "#define CRC5_POLY    0x14\n" );
 	fprintf( f, "#define CRC5_CHECK   0x06\n" );
@@ -294,20 +295,14 @@ uint16_t crc5=0x1f;
 	fprintf( f, "#ifndef _INASM_\n\n" );
 	fprintf( f, "uint32_t usb_ramtable[%d] __attribute__((aligned(16))) = {\n", (60 + TABLESIZE)/4 );
 	fprintf( f, "\tGPIO_BASE_REG, // Base reg for all GPIO (Offset 0)\n" );
-	fprintf( f, "\t0, // Reserved                          (Offset 1)\n" );
-	fprintf( f, "\t0, // Reserved                          (Offset 2)\n" );
-	fprintf( f, "\t100, // Loop Count                      (Offset 3)\n" );
-	fprintf( f, "\t0, // Reserved                          (Offset 4)\n" );
-	fprintf( f, "\t0, // Reserved                          (Offset 5)\n" );
-	fprintf( f, "\t0x3c, // Anding mask for table          (Offset 6)\n" );
-	fprintf( f, "\t136, //Timeout (in bits)                (Offset 7)\n" );
-	fprintf( f, "\t(uint32_t)&usb_internal_state,  //State (Offset 8)\n" );
-	fprintf( f, "\t0x00, //Reserved                        (Offset 9)\n" );
-	fprintf( f, "\t0xffff, //Initial value for CRC         (Offset 10)\n");
-	fprintf( f, "\t0xA001, //CRC Poly                      (Offset 11)\n");
-	fprintf( f, "\t0xB001, //CRC Check                     (Offset 12)\n");
-	fprintf( f, "\t0x00, //Reserved                        (Offset 13)\n");
-	fprintf( f, "\t0x00, //Reserved                        (Offset 14)\n");
+	fprintf( f, "\t0, // Reserved (For debug)              (Offset 1)\n" );
+	fprintf( f, "\t100, // Loop Count                      (Offset 2)\n" );
+	fprintf( f, "\t0x3c, // Anding mask for table          (Offset 3)\n" );
+	fprintf( f, "\t136, //Timeout (in bits)                (Offset 4)\n" );
+	fprintf( f, "\t(uint32_t)&usb_internal_state,  //State (Offset 5)\n" );
+	fprintf( f, "\t0xffff, //Initial value for CRC         (Offset 6)\n");
+	fprintf( f, "\t0xA001, //CRC Poly                      (Offset 7)\n");
+	fprintf( f, "\t0xB001, //CRC Check                     (Offset 8)\n");
 
 	for( i = 0; i < TABLESIZE/4; i++ )
 	{

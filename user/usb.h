@@ -1,23 +1,11 @@
 #ifndef _USB_H
 #define _USB_H
 
+#include "usb_config.h"
+
 #define USB_LOW_SPEED
-//#define USB_FULL_SPEED  (Not implemented)
-#define DEBUGPIN 2
 
-#define DPLUS 5
-#define DMINUS 4
-#define DMINUSBASE 4  //Must be D- first, then D+ second.
-
-#define ENDPOINTS 3
-
-#define PERIPHSDPLUS    PERIPHS_IO_MUX_GPIO5_U
-#define PERIPHSDMINUS   PERIPHS_IO_MUX_GPIO4_U
-#define FUNCDPLUS  FUNC_GPIO5
-#define FUNCDMINUS FUNC_GPIO4
-
-
-#define USB_BUFFERSIZE 16  //Must be big enough to hold PID + DATA + EOF (plus a bit just in case)
+#define USB_BUFFERSIZE 12  //Must be big enough to hold PID + DATA + CRC + EOF
 
 #define USB_OFFSET_BUFFER		0
 #define USB_OFFSET_DSTATUS		(USB_BUFFERSIZE)
@@ -57,42 +45,21 @@ struct usb_internal_state_struct
 	uint32_t debug;
 
 
-	struct usb_endpoint * ce;  //Current endpoint
+	struct usb_endpoint * ce;  //Current endpoint (set by IN/OUT PIDs)
 	struct usb_endpoint eps[ENDPOINTS];
 
 	//Things past here are addressable by C.
 
-	uint32_t my_address;
+	uint32_t my_address;	//For the current address set up by the setup portion of USB.
 	uint32_t setup_request; //1 if needing setup packet.
-
-	//Current transmission from us to host.
-//	const uint8_t  * usb_bufferret;
-//	uint32_t   usb_bufferret_len;
-
-	int last_sent_qty;
-
-	//TODO: make an endpoint struct for handling this...
-/*	int   *  eptoggle;
-	int   *  marksentptr;
-	uint8_t ep1data[4];
-	int     sendep1;
-	int     ep1toggle;
-	uint8_t ep3data[8];
-	int     sendep3;
-	int     ep3toggle;
-*/
-
-	//Awkward example with use of control messages to get data to/from device.
-	//uint8_t * usb_bufferaccept;
-	//uint32_t  accept_length;
-
-	uint8_t user_control[150];
-	int     user_control_length_acc; //From host to us.
-	int     user_control_length_ret; //From us to host.
 };
 
 extern struct usb_internal_state_struct usb_internal_state __attribute__((aligned(4)));
 
+//Functions that must be supplied by user.
+void HandleCustomControl( int bmRequestType, int bRequest, int wLength, struct usb_internal_state_struct * ist );
+
+//Functions within this suite
 void ICACHE_FLASH_ATTR init_usb();
 
 extern void gpio_intr();
@@ -142,22 +109,6 @@ extern uint32_t usb_reinstate;
 
 #define GPIO_OFFSET_GPIO_STATUS  0x1c
 #define GPIO_OFFSET_GPIO_STATUS_W1TC 0x24
-
-
-//These interrupts don't work well.
-#define DISABLE_INTERRUPTS_LCL \
-	rsil a0, 15; \
-	s32i a0, a1, 60; \
-	rsr a0, SAR; \
-	s32i a0, a1, 64;
-
-#define ENABLE_INTERRUPTS_LCL \
-	l32i a0, a1, 64; \
-	wsr a0, SAR; \
-	isync; \
-	l32i a0, a1, 60; \
-	wsr a0, ps; \
-	isync;
 
 #endif
 

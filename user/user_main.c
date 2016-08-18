@@ -22,7 +22,6 @@
 #define procTaskQueueLen    1
 
 static volatile os_timer_t some_timer;
-static struct espconn *pUdpServer;
 uint8_t last_leds[512*3];
 int last_led_count;
 
@@ -43,29 +42,63 @@ char * strcat( char * dest, char * src )
 
 os_event_t    procTaskQueue[procTaskQueueLen];
 
+
+//Awkward example with use of control messages to get data to/from device.
+uint8_t user_control[150];
+int     user_control_length_acc; //From host to us.
+int     user_control_length_ret; //From us to host.
+
+
+void HandleCustomControl( int bmRequestType, int bRequest, int wLength, struct usb_internal_state_struct * ist )
+{
+	struct usb_endpoint * e = ist->ce;
+
+	if( bmRequestType == 0x80 )
+	{
+		if( bRequest == 0xa7) //US TO HOST "in"
+		{
+			if( user_control_length_ret )
+			{
+				e->ptr_in = user_control;
+				e->size_in = user_control_length_ret;
+				if( wLength < e->size_in ) e->size_in = wLength;
+				user_control_length_ret = 0;
+			}
+		}
+	}
+
+	if( bmRequestType == 0x00 )
+	{
+		if( bRequest == 0xa6 && user_control_length_acc == 0 ) //HOST TO US "out"
+		{
+			e->ptr_out = user_control;
+			e->max_size_out = sizeof( user_control );
+			if( e->max_size_out > wLength ) e->max_size_out = wLength;
+			e->got_size_out = 0;
+			e->transfer_done_ptr = &user_control_length_acc;
+		}
+
+	}
+
+}
+
 static void ICACHE_FLASH_ATTR procTask(os_event_t *events)
 {
 	CSTick( 0 );
 
-
-
-//	ets_memcpy( usb_internal_state.user_control_in, usb_internal_state.user_control_out, usb_internal_state.user_control_out_length );
-//	usb_internal_state.user_control_in_length = usb_internal_state.user_control_out_length;
-
-	if( usb_internal_state.user_control_length_acc )
+	if( user_control_length_acc )
 	{
 		//printf( "\nGot: %s\n", usb_internal_state.user_control );
-		int r = issue_command( usb_internal_state.user_control, sizeof( usb_internal_state.user_control )-1, usb_internal_state.user_control, usb_internal_state.user_control_length_acc );
-		usb_internal_state.user_control_length_acc = 0;
+		int r = issue_command( user_control, sizeof( user_control )-1, user_control, user_control_length_acc );
+		user_control_length_acc = 0;
 		//printf( "%d/%s/%d\n", usb_internal_state.user_control_length_acc, usb_internal_state.user_control, r );
 		if( r >= 0 )
-			usb_internal_state.user_control_length_ret = r;
+			user_control_length_ret = r;
 	}
 
 	system_os_post(procTaskPrio, 0, 0 );
 }
 
-//extern uint32_t usb_ramtable[31] __attribute__((aligned(16)));
 
 uint8_t my_ep1[4];
 uint8_t my_ep2[8];
@@ -77,7 +110,7 @@ static void ICACHE_FLASH_ATTR myTimer(void *arg)
 	int i;
 
 	//Send mouse and keyboard commands
-	my_ep1[2] = 1;
+	my_ep1[2] = 2;
 //	my_ep2[2] ^= 8;  //Keyboard
 
 	usb_internal_state.eps[1].ptr_in = my_ep1;
@@ -92,37 +125,9 @@ static void ICACHE_FLASH_ATTR myTimer(void *arg)
 	usb_internal_state.eps[1].send = 1;
 	usb_internal_state.eps[2].send = 1;
 
-
-#if 0
-	printf( "(%08x)(%08x)(%08x)\n", usb_ramtable[1], usb_internal_state.debug, usb_internal_state.eps[0].size_in  );
-//	for( i = 0; i < 16; i++ )
-//		printf( "%02x ", usb_internal_state.usb_buffer[i] );
-//	printf( "\n" );
-//	PIN_OUT_CLEAR = _BV(5);
-#endif
-
 	CSTick( 1 );
 }
 
-
-//Called when new packet comes in.
-static void ICACHE_FLASH_ATTR
-udpserver_recv(void *arg, char *pusrdata, unsigned short len)
-{
-/*	struct espconn *pespconn = (struct espconn *)arg;
-
-	uart0_sendStr("X");
-
-	ws2812_push( pusrdata+3, len-3 );
-
-	len -= 3;
-	if( len > sizeof(last_leds) + 3 )
-	{
-		len = sizeof(last_leds) + 3;
-	}
-	ets_memcpy( last_leds, pusrdata+3, len );
-	last_led_count = len / 3;*/
-}
 
 void ICACHE_FLASH_ATTR charrx( uint8_t c )
 {
@@ -132,6 +137,9 @@ void ICACHE_FLASH_ATTR charrx( uint8_t c )
 
 volatile uint32_t my_table[] = { 0, (uint32_t)&PIN_IN, (uint32_t)&PIN_OUT_SET, (uint32_t)&PIN_OUT_CLEAR, 0xffff0000, 0x0000ffff };
 
+
+
+#ifdef PROFILE
 int time_ccount(void) 
 {
         unsigned r;
@@ -156,8 +164,8 @@ end:\n\
 
         return r; //rsr a9, ccount //rsr a11, ccount
 //	addi %[out], %[out], -1\n\
-
 }
+#endif
 
 void user_init(void)
 {
@@ -168,7 +176,7 @@ void user_init(void)
 
 	//ets_delay_us(200000);
 	//uart0_sendStr("\r\n\033c" );
-	uart0_sendStr("esp8266 usb driver\r\n");
+	uart0_sendStr("esp8266 test usb driver\r\n");
 	system_update_cpu_freq( 80 );
 //#define PROFILE
 #ifdef PROFILE
@@ -188,18 +196,8 @@ void user_init(void)
 
 	CSSettingsLoad( 0 );
 	CSPreInit();
-    pUdpServer = (struct espconn *)os_zalloc(sizeof(struct espconn));
-	ets_memset( pUdpServer, 0, sizeof( struct espconn ) );
-	espconn_create( pUdpServer );
-	pUdpServer->type = ESPCONN_UDP;
-	pUdpServer->proto.udp = (esp_udp *)os_zalloc(sizeof(esp_udp));
-	pUdpServer->proto.udp->local_port = 7777;
-	espconn_regist_recvcb(pUdpServer, udpserver_recv);
 
-	if( espconn_create( pUdpServer ) )
-	{
-		while(1) { uart0_sendStr( "\r\nFAULT\r\n" ); }
-	}
+	//Create additional socket, etc. here.
 
 	CSInit();
 
@@ -213,11 +211,10 @@ void user_init(void)
 	WRITE_PERI_REG(RTC_GPIO_ENABLE,
 		READ_PERI_REG(RTC_GPIO_ENABLE) & (uint32)0xfffffffe);       //out disable
 
-	SetServiceName( "ws2812" );
+	SetServiceName( "espusb" );
 	AddMDNSName( "cn8266" );
-	AddMDNSName( "ws2812" );
+	AddMDNSName( "espusb" );
 	AddMDNSService( "_http._tcp", "An ESP8266 Webserver", 80 );
-	AddMDNSService( "_ws2812._udp", "WS2812 Driver", 7777 );
 	AddMDNSService( "_cn8266._udp", "ESP8266 Backend", 7878 );
 
 	//Add a process
