@@ -15,7 +15,7 @@ struct usb_internal_state_struct usb_internal_state __attribute__((aligned(4)));
 #include "usb_config.h"
 
 //Received a setup for a specific endpoint.
-void handle_setup( uint32_t this_token, struct usb_internal_state_struct * ist )
+void usb_pid_handle_setup( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
 	uint8_t addr = (this_token>>8) & 0x7f;
 	uint8_t endp = (this_token>>15) & 0xf;
@@ -33,15 +33,25 @@ end:
 	__asm__ __volatile__( "movi a0, usb_reinstate" ); //After this token, we are immediately expecting another grouping.  This short-circuits the 'return'.
 }
 
-void handle_sof( uint32_t this_token, struct usb_internal_state_struct * ist )
+void usb_pid_handle_sof( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
 }
 
-void PerpetuatePacket( struct usb_internal_state_struct * ist )
+void usb_pid_handle_in( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
-	struct usb_endpoint * e = ist->ce;
-	if( !e ) return;
-	if( e->ptr_in )
+	uint8_t addr = (this_token>>8) & 0x7f;
+	uint8_t endp = (this_token>>15) & 0xf;
+
+	//If we get an "in" token, we have to strike any accept buffers.
+
+	if( endp >= ENDPOINTS ) return;
+	if( addr != 0 && addr != ist->my_address ) return;
+
+	struct usb_endpoint * e = ist->ce = &ist->eps[endp];
+
+	e->got_size_out = 0;  //Cancel any out transaction
+
+	if( e->send && e->ptr_in ) 
 	{
 		int tosend = e->size_in - e->place_in;
 
@@ -71,26 +81,6 @@ void PerpetuatePacket( struct usb_internal_state_struct * ist )
 			usb_send_data( sendnow, tosend+2, 0 );
 			e->advance_in = tosend;
 		}
-	}
-}
-
-void handle_in( uint32_t this_token, struct usb_internal_state_struct * ist )
-{
-	uint8_t addr = (this_token>>8) & 0x7f;
-	uint8_t endp = (this_token>>15) & 0xf;
-
-	//If we get an "in" token, we have to strike any accept buffers.
-
-	if( endp >= ENDPOINTS ) return;
-	if( addr != 0 && addr != ist->my_address ) return;
-
-	struct usb_endpoint * e = ist->ce = &ist->eps[endp];
-
-	e->got_size_out = 0;  //Cancel any out transaction
-
-	if( e->send && e->ptr_in ) 
-	{
-		PerpetuatePacket( ist );
 		return;
 	}
 	else
@@ -104,7 +94,7 @@ void handle_in( uint32_t this_token, struct usb_internal_state_struct * ist )
 
 }
 
-void handle_out( uint32_t this_token, struct usb_internal_state_struct * ist )
+void usb_pid_handle_out( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
 	//We need to handle this here because we could have an interrupt in the middle of a control or bulk transfer.
 	//This will correctly swap back the endpoint.
@@ -117,7 +107,7 @@ void handle_out( uint32_t this_token, struct usb_internal_state_struct * ist )
 	__asm__ __volatile__( "movi a0, usb_reinstate" );  //After this token, we are immediately expecting another grouping.  This short-circuits the 'return'.
 }
 
-void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, uint32_t which_data )
+void usb_pid_handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, uint32_t which_data )
 {
 	//Received data from host.
 
@@ -166,7 +156,7 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 				e->size_in = dl->length;
 				if( s->wLength < e->size_in ) e->size_in = s->wLength;
 			}
-			HandleCustomControl( s->bmRequestType, s->bRequest, s->wLength, ist );
+			usb_handle_custom_control( s->bmRequestType, s->bRequest, s->wLength, ist );
 		}
 		else if( s->bmRequestType == 0x00 )
 		{
@@ -178,7 +168,7 @@ void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, u
 			{
 				//s->wValue; has the index.  We don't really care about this.
 			}
-			HandleCustomControl( s->bmRequestType, s->bRequest, s->wLength, ist );
+			usb_handle_custom_control( s->bmRequestType, s->bRequest, s->wLength, ist );
 		}
 	}
 	else if( e->ptr_out )
@@ -210,7 +200,7 @@ just_ack:
 	}
 }
 
-void handle_ack( uint32_t this_token, struct usb_internal_state_struct * ist )
+void usb_pid_handle_ack( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
 	struct usb_endpoint * e = ist->ce;
 	if( !e ) return;
@@ -225,7 +215,7 @@ void handle_ack( uint32_t this_token, struct usb_internal_state_struct * ist )
 }
 
 
-void  ICACHE_FLASH_ATTR init_usb()
+void  ICACHE_FLASH_ATTR usb_init()
 {
     ETS_GPIO_INTR_DISABLE();                                           //Close the GPIO interrupt
 
@@ -250,3 +240,4 @@ void  ICACHE_FLASH_ATTR init_usb()
     ETS_GPIO_INTR_ENABLE();
 
 }
+

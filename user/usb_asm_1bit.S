@@ -6,11 +6,11 @@
 		* usb_ramtable = Created by table (in the tabler) folder.  Must be loaded into dram to work.
 
 	Global functions that must be implemented elsewhere.
-		* handle_setup
-		* handle_sof
-		* handle_in
-		* handle_out
-		* handle_data
+		* usb_pid_handle_setup
+		* usb_pid_handle_sof
+		* usb_pid_handle_in
+		* usb_pid_handle_out
+		* usb_pid_handle_data
 
 	Provided symbols include:
 		* gpio_intr = Interrupt to be called on the rising edge of D-.
@@ -43,6 +43,8 @@
 //a15 is the actual time (in ccount (clock counts)) that we're at.  And, a6 is a trash
 //variable.  Don't expect it to stick around.
 .align 4
+usb_asm_start:
+
 util_wait_usb_ccount:
 	_addi a15, a15, 53  //Advance 53 ticks
 	_addi.n a10, a10, 1
@@ -246,27 +248,27 @@ skip_crc_check:
 	bbsi a2, 0, token_or_data
 		extui a15, a2, 1, 7
 		addi a15, a15, -0b1101001  //Make sure this is an ack.
-		beqz a15, handle_ack
+		beqz a15, usb_pid_handle_ack
 		j end_gpio_intr
 	token_or_data:
 		bbsi a2, 1, data_msg        //Jump to the correct C function, don't call!  We already put the return address in A0.
 			extui a15, a2, 2, 6
 			addi a8, a15, -0b001011
-			beqz a8, handle_setup
+			beqz a8, usb_pid_handle_setup
 			addi a8, a15, -0b101001
-			beqz a8, handle_sof
+			beqz a8, usb_pid_handle_sof
 			addi a8, a15, -0b011010
-			beqz a8, handle_in
+			beqz a8, usb_pid_handle_in
 			addi a8, a15, -0b111000
-			beqz a8, handle_out		
+			beqz a8, usb_pid_handle_out		
 			j end_gpio_intr //We don't understand this message
 		data_msg:
 			extui a15, a2, 2, 6
 			extui a4, a2, 3, 1
 			addi a8, a15, -0b110000
-			beqz a8, handle_data
+			beqz a8, usb_pid_handle_data
 			addi a8, a15, -0b010010
-			beqz a8, handle_data
+			beqz a8, usb_pid_handle_data
 			j end_gpio_intr  //Unmatched message?
 
 	//No code here should be called.
@@ -512,4 +514,4 @@ DEBUG_HIGH
 
 	ret.n
 
-
+usb_asm_end:

@@ -57,25 +57,25 @@ struct usb_internal_state_struct
 extern struct usb_internal_state_struct usb_internal_state __attribute__((aligned(4)));
 
 //Functions that must be supplied by user.
-void HandleCustomControl( int bmRequestType, int bRequest, int wLength, struct usb_internal_state_struct * ist );
+void usb_handle_custom_control( int bmRequestType, int bRequest, int wLength, struct usb_internal_state_struct * ist );
 
 //Functions within this suite
-void ICACHE_FLASH_ATTR init_usb();
+void ICACHE_FLASH_ATTR usb_init();
 
+//This function is provided in assembly.
 extern void gpio_intr();
 
 //poly_function = 0 to include CRC.
 //poly_function = 2 to exclude CRC.
+//This function is provided in assembly
 extern void usb_send_data( uint8_t * data, uint32_t length, uint32_t poly_function );
 
-void handle_setup( uint32_t this_token, struct usb_internal_state_struct * ist );
-void handle_sof( uint32_t this_token, struct usb_internal_state_struct * ist );
-void handle_in( uint32_t this_token, struct usb_internal_state_struct * ist );
-void handle_out( uint32_t this_token, struct usb_internal_state_struct * ist );
-
-void handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, uint32_t which_data );
-
-void handle_ack( uint32_t this_token, struct usb_internal_state_struct * ist );
+void usb_pid_handle_setup( uint32_t this_token, struct usb_internal_state_struct * ist );
+void usb_pid_handle_sof( uint32_t this_token, struct usb_internal_state_struct * ist );
+void usb_pid_handle_in( uint32_t this_token, struct usb_internal_state_struct * ist );
+void usb_pid_handle_out( uint32_t this_token, struct usb_internal_state_struct * ist );
+void usb_pid_handle_data( uint32_t this_token, struct usb_internal_state_struct * ist, uint32_t which_data );
+void usb_pid_handle_ack( uint32_t this_token, struct usb_internal_state_struct * ist );
 
 extern uint32_t usb_reinstate;
 
@@ -84,12 +84,12 @@ extern uint32_t usb_reinstate;
 .global usb_send_data;
 .global usb_internal_state;
 .global usb_reinstate;
-.global handle_setup
-.global handle_sof
-.global handle_in
-.global handle_out
-.global handle_data
-.global handle_ack
+.global usb_pid_handle_setup
+.global usb_pid_handle_sof
+.global usb_pid_handle_in
+.global usb_pid_handle_out
+.global usb_pid_handle_data
+.global usb_pid_handle_ack
 #endif
 
 

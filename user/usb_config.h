@@ -1,7 +1,7 @@
 #ifndef _USB_CONFIG_H
 #define _USB_CONFIG_H
 
-//Defines the number of endpoints for this device.
+//Defines the number of endpoints for this device. (Always add one for EP0)
 #define ENDPOINTS 3
 
 //Defines a pin that is useful for debugging USB on a logic analyzer

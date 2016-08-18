@@ -49,7 +49,7 @@ int     user_control_length_acc; //From host to us.
 int     user_control_length_ret; //From us to host.
 
 
-void HandleCustomControl( int bmRequestType, int bRequest, int wLength, struct usb_internal_state_struct * ist )
+void usb_handle_custom_control( int bmRequestType, int bRequest, int wLength, struct usb_internal_state_struct * ist )
 {
 	struct usb_endpoint * e = ist->ce;
 
@@ -227,7 +227,7 @@ void user_init(void)
 
 	printf( "Boot Ok.\n" );
 
-	init_usb();
+	usb_init();
  
 	wifi_set_sleep_type(LIGHT_SLEEP_T);
 	wifi_fpm_set_sleep_type(LIGHT_SLEEP_T);
