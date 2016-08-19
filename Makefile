@@ -7,3 +7,9 @@ SRCS += 	user/usb_asm_1bit.S \
 
 usbburn : $(FW_FILE1) $(FW_FILE2)
 	web/execute_reflash USB $(FW_FILE1) $(FW_FILE2)
+
+#Useful git commands
+
+init_submodule :
+	git submodule update --init --recursive
+
