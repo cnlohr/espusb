@@ -4,7 +4,7 @@
 #include "c_types.h"
 #include "user_interface.h"
 #include "ets_sys.h"
-#include "driver/uart.h"
+#include "uart.h"
 #include "osapi.h"
 #include "espconn.h"
 #include "mystuff.h"
@@ -107,23 +107,27 @@ extern uint32_t usb_ramtable[31];
 //Timer event.
 static void ICACHE_FLASH_ATTR myTimer(void *arg)
 {
+	struct usb_internal_state_struct * uis = &usb_internal_state;
+	struct usb_endpoint * e1 = &uis->eps[1];
+	struct usb_endpoint * e2 = &uis->eps[2];
+
 	int i;
 
 	//Send mouse and keyboard commands
 	my_ep1[2] = 2;
 //	my_ep2[2] ^= 8;  //Keyboard
 
-	usb_internal_state.eps[1].ptr_in = my_ep1;
-	usb_internal_state.eps[2].ptr_in = my_ep2;
+	printf( "%d\n", e1->send );
+	
+	e1->ptr_in = my_ep1;
+	e1->place_in = 0;
+	e1->size_in = sizeof( my_ep1 );
+	e1->send = 1;
 
-	usb_internal_state.eps[1].size_in = sizeof( my_ep1 );
-	usb_internal_state.eps[2].size_in = sizeof( my_ep2 );
-
-	usb_internal_state.eps[1].place_in = 0;
-	usb_internal_state.eps[2].place_in = 0;
-
-	usb_internal_state.eps[1].send = 1;
-	usb_internal_state.eps[2].send = 1;
+	e2->ptr_in = my_ep2;
+	e2->place_in = 0;
+	e2->size_in = sizeof( my_ep2 );
+	e2->send = 1;
 
 	CSTick( 1 );
 }
