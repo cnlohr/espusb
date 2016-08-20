@@ -74,8 +74,19 @@ void usb_pid_handle_in( uint32_t this_token, struct usb_internal_state_struct * 
 
 	if( !e->send || !e->ptr_in || e->ptr_in == EMPTY_SEND_BUFFER )  //Tricky: Empty packet.
 	{
-		usb_send_data( sendnow, 2, 3 );  //Force a CRC
-		e->ptr_in = 0;
+
+		//Tricky: Control messages are not allowed to send NAKs.  We /have/ to send an empty packet for them if no more data is available.
+		//With endpoints, proper, it's okay to send NAKs.
+		if( endp == 0 )
+		{
+			usb_send_data( sendnow, 2, 3 );  //Force a CRC
+			e->ptr_in = 0;
+		}
+		else
+		{
+			uint8_t sendword[2] = { 0x80, 0x5a };  //Empty data. "NAK"
+			usb_send_data( sendword, 2, 2 );
+		}
 	}
 	else
 	{
