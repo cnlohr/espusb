@@ -51,47 +51,40 @@ void usb_pid_handle_in( uint32_t this_token, struct usb_internal_state_struct * 
 
 	e->got_size_out = 0;  //Cancel any out transaction
 
+
+	int tosend = 0;
+	uint8_t sendnow[12];
+	sendnow[0] = 0x80;
+
 	if( e->send && e->ptr_in ) 
 	{
-		int tosend = e->size_in - e->place_in;
+		tosend = e->size_in - e->place_in;
 
 		if( tosend > 8 ) tosend = 8;
+	}
 
-		uint8_t sendnow[12];
-		sendnow[0] = 0x80;
-
-		if( e->toggle_in )
-		{
-			sendnow[1] = 0b01001011; //DATA1
-		}
-		else
-		{
-			sendnow[1] = 0b11000011; //DATA0
-		}
-
-		if( e->ptr_in == EMPTY_SEND_BUFFER )  //Tricky: Empty packet.
-		{
-			usb_send_data( sendnow, 2, 3 );  //Force a CRC
-			e->ptr_in = 0;
-		}
-		else
-		{
-			if( tosend )
-				ets_memcpy( sendnow+2, e->ptr_in + e->place_in, tosend );
-			usb_send_data( sendnow, tosend+2, 0 );
-			e->advance_in = tosend;
-		}
-		return;
+	if( e->toggle_in )
+	{
+		sendnow[1] = 0b01001011; //DATA1
 	}
 	else
 	{
-		volatile int i;
-		for( i = 0; i < 10; i++ );
-		uint8_t sendword[2] = { 0x80, 0x5a };  //Empty data. "NAK"
-		usb_send_data( sendword, 2, 2 );
-		return;
+		sendnow[1] = 0b11000011; //DATA0
 	}
 
+	if( !e->send || !e->ptr_in || e->ptr_in == EMPTY_SEND_BUFFER )  //Tricky: Empty packet.
+	{
+		usb_send_data( sendnow, 2, 3 );  //Force a CRC
+		e->ptr_in = 0;
+	}
+	else
+	{
+		if( tosend )
+			ets_memcpy( sendnow+2, e->ptr_in + e->place_in, tosend );
+		usb_send_data( sendnow, tosend+2, 0 );
+		e->advance_in = tosend;
+	}
+	return;
 }
 
 void usb_pid_handle_out( uint32_t this_token, struct usb_internal_state_struct * ist )
