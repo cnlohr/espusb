@@ -82,8 +82,38 @@ void usb_handle_custom_control( int bmRequestType, int bRequest, int wLength, st
 
 }
 
+uint8_t my_ep1[4];
+uint8_t my_ep2[8];
+extern uint32_t usb_ramtable[31];
+
+extern int keybt;
+extern int keymod;
+extern int keypress;
+
+
 static void ICACHE_FLASH_ATTR procTask(os_event_t *events)
 {
+	struct usb_internal_state_struct * uis = &usb_internal_state;
+	struct usb_endpoint * e2 = &uis->eps[2];
+
+	e2->ptr_in = my_ep2;
+	e2->place_in = 0;
+	e2->size_in = sizeof( my_ep2 );
+
+	if( e2->send == 0 && my_ep2[2] )
+	{
+		my_ep2[2] = 0; //Makes sure to unclick keyboard if clicked.
+		e2->send = 1;
+	}
+
+	if( keypress )
+	{
+		my_ep2[0] = keymod;
+		my_ep2[2] = keybt;
+		e2->send = 1;
+		keypress = 0;
+	}
+
 	CSTick( 0 );
 
 	if( user_control_length_acc )
@@ -99,10 +129,6 @@ static void ICACHE_FLASH_ATTR procTask(os_event_t *events)
 	system_os_post(procTaskPrio, 0, 0 );
 }
 
-
-uint8_t my_ep1[4];
-uint8_t my_ep2[8];
-extern uint32_t usb_ramtable[31];
 
 //Timer event.
 static void ICACHE_FLASH_ATTR myTimer(void *arg)

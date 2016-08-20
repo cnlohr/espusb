@@ -9,11 +9,14 @@ extern int last_led_count;
 uint8_t my_ep1[4];
 uint8_t my_ep2[8];
 
+int keybt;
+int keymod;
+int keypress;
 
 int ICACHE_FLASH_ATTR CustomCommand(char * buffer, int retsize, char *pusrdata, unsigned short len)
 {
 	char * buffend = buffer;
-
+	printf( "CUSTOM: %s\n", pusrdata );
 	switch( pusrdata[1] )
 	{
 	case 'C': case 'c': //Custom command test
@@ -21,8 +24,21 @@ int ICACHE_FLASH_ATTR CustomCommand(char * buffer, int retsize, char *pusrdata, 
 		buffend += ets_sprintf( buffend, "CC" );
 		return buffend-buffer;
 	}
-
-	case 'M': case 'm': //Custom command test
+	case 'K': case 'k': //Keyboard
+	{
+		printf( "Key Command: %s\n", pusrdata );
+		char * mods = len>2 ? &pusrdata[2] : 0;
+		char * btn  = mods ? (char *)ets_strstr( (char*)(mods+1), "\t" ) : 0;
+		printf( "MODS/BTN: %p %p %p\n", pusrdata, mods, btn );
+		if( btn ) { *btn = 0; btn++; }
+		keymod = my_atoi( mods );
+		keybt = my_atoi( btn );
+		keypress = 1;
+		printf( "Keypress!\n" );
+		buffend += ets_sprintf( buffend, "CK" );
+		return buffend-buffer;
+	}
+	case 'M': case 'm': //Mouse
 	{
 		//CM[Mouse Button]\t[x]\t[y];
 		char * btn = len>2 ? &pusrdata[2] : 0;
@@ -54,7 +70,6 @@ int ICACHE_FLASH_ATTR CustomCommand(char * buffer, int retsize, char *pusrdata, 
 		e1->place_in = 0;
 		e1->size_in = sizeof( my_ep1 );
 		e1->send = 1;
-
 
 		printf( "%d: %d :%d\n", b, dx, dy );
 		buffend += ets_sprintf( buffend, "CM" );

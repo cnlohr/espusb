@@ -7,6 +7,7 @@ This particular file may be licensed under the MIT/x11, New BSD or ColorChord Li
 <script language="javascript" type="text/javascript" src=menuinterface.js></script>
 <script language="javascript" type="text/javascript" src=main.js></script>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
 table { width: 100%; }
 td { vertical-align: top; }
@@ -15,7 +16,8 @@ td { vertical-align: top; }
 #SystemMessage { position: fixed; top: 5px; background-color: DarkSlateBlue; color: #ffffff; left: 5px; display:none; }
 .dragandrophandler { border:2px dotted #0B85A1; color:#92AAB0;vertical-align:middle;padding:10px 10px 10 10px;margin-bottom:10px;font-size:200%;}
 .unsaved-input { border: 2px solid pink; border-radius: 7px; }
-#MouseCap { border-radius: 25px; background: green; padding: 20px; width: 200px; height: 150px; }
+#MouseCap { border-radius: 25px; background: green; padding: 20px; width: 100%; height: 200px; }
+.regbtn { border-radius: 5px; background: red; padding: 10px; width: 70px; height: 70px; }
 </style>
 </head>
 <body>
@@ -40,8 +42,10 @@ td { vertical-align: top; }
 <div id=HID class="collapsible">
 <table width=100% border=1><tr><td>
 
-<p><div id=MouseCap>Mouse<br>Grab<br>Cell</div></p>
-<input id=MouseDebug>
+<TABLE><TR><TD colspan=3><div id=MouseCap>Mouse<br>Grab<br>Cell</div></TD></TR>
+<TR><TD><div id=Mouse0 class="regbtn">Left</div></TD><TD><div id=Mouse2 class="regbtn">Middle</div></TD><TD><div id=Mouse1 class="regbtn">Right</div></TD></TR>
+</table>
+<p>Keyboard:<input id=KeyboardInput type="text"></p>
 
 
 </td></tr></table>
