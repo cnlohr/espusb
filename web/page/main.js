@@ -2,6 +2,95 @@
 //
 //This particular file may be licensed under the MIT/x11, New BSD or ColorChord Licenses.
 
+function KickHID()
+{
+}
+
+var lastMouseX;
+var lastMouseY;
+var TimeLastUp;
+var MouseDown = false;
+
+var UpTimeout;
+
+
+function HandleUpDown( down )
+{
+	MouseDown = down;
+	DeltaMouse( 0, 0 );
+
+	if( down )
+	{
+		$("#MouseCap").css("background-color","blue");
+	}
+	else
+	{
+		$("#MouseCap").css("background-color","green");
+	}
+
+}
+
+function MouseUpDown( down )
+{
+	if( !down )
+	{
+		TimeLastUp = Date.now();
+		UpTimeout = setTimeout( function() { HandleUpDown( false ); }, 200 );
+	}
+	else
+	{
+		var now = Date.now();
+	    var dt = now - TimeLastUp;
+		HandleUpDown( dt < 150 );
+		try{ clearTimeout( UpTimeout ); } catch(e) { }
+		DeltaMouse( 0,0 );
+	}
+x
+}
+
+function DeltaMouse( x, y )
+{
+	msg = Math.round(x) + ", " + Math.round(y);
+	//$("#MouseDebug").val( msg );
+	var msg = "CM" + (MouseDown?"1":"0") + "\t" + Math.round(x) + "\t" + Math.round(y);
+	console.log( msg );
+	QueueOperation( msg );
+}
+
+function AttachMouseListener()
+{
+    $("#MouseCap").on("touchstart", function(event) {
+		event.preventDefault();
+		var msg = "Mouse:";
+		var e = event.originalEvent.changedTouches[0];
+		lastMouseX = e.clientX;
+		lastMouseY = e.clientY;
+		MouseUpDown( true );
+	});
+
+    $("#MouseCap").on("touchend", function(event) {
+		event.preventDefault();
+		var msg = "Mouse:";
+		var e = event.originalEvent.changedTouches[0];
+		lastMouseX = e.clientX;
+		lastMouseY = e.clientY;
+		MouseUpDown( false );
+	});
+
+	$("#MouseCap").on("touchmove", function(event)  {
+		event.preventDefault();
+		var msg = "Mouse:";
+		var e = event.originalEvent.changedTouches[0];
+		DeltaMouse( e.clientX - lastMouseX, e.clientY - lastMouseY );
+		lastMouseX = e.clientX;
+		lastMouseY = e.clientY;
+		return false;
+	});
+	console.log( "Attaching." );
+}
+
+window.addEventListener("load", AttachMouseListener, false);
+
 /*
 is_leds_running = false;
 pause_led = false;

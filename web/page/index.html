@@ -15,10 +15,11 @@ td { vertical-align: top; }
 #SystemMessage { position: fixed; top: 5px; background-color: DarkSlateBlue; color: #ffffff; left: 5px; display:none; }
 .dragandrophandler { border:2px dotted #0B85A1; color:#92AAB0;vertical-align:middle;padding:10px 10px 10 10px;margin-bottom:10px;font-size:200%;}
 .unsaved-input { border: 2px solid pink; border-radius: 7px; }
+#MouseCap { border-radius: 25px; background: green; padding: 20px; width: 200px; height: 150px; }
 </style>
 </head>
 <body>
-<h2>esp8266 ws2812 i2s controller</h2>
+<h2>esp8266 ESPUSB controller</h2>
 <hr>
 
 <table id="MainMenu">
@@ -34,15 +35,25 @@ td { vertical-align: top; }
 <p>For more information about this project, visit it on github, here: <a href=https://github.com/cnlohr/espusb>https://github.com/cnlohr/esp8266ws2812i2s</a></p>
 </div></td></tr></table></td></tr>
 
-<!--
-
 <tr><td width=1>
-<input type=submit onclick="ShowHideEvent( 'LEDs' ); KickLEDs();" value="LEDs"></td><td>
-<div id=LEDs class="collapsible">
-<table width=100% border=1><tr><td id=LEDCanvasHolder><CANVAS id=LEDCanvas width=512 height=100></CANVAS></td>
-<td><input type=button onclick="ToggleLEDPause();" id=LEDPauseButton value="|| / >"></td></tr></table>
-</div></td></tr>
+<input type=submit onclick="ShowHideEvent( 'HID' ); KickHID();" value="HID"></td><td>
+<div id=HID class="collapsible">
+<table width=100% border=1><tr><td>
+
+<p><div id=MouseCap>Mouse<br>Grab<br>Cell</div></p>
+<input id=MouseDebug>
+
+
+</td></tr></table>
+</div>
+</td>
+</tr>
+
+<!--<td id=LEDCanvasHolder><CANVAS id=LEDCanvas width=512 height=100></CANVAS></td>
+<td><input type=button onclick="ToggleLEDPause();" id=LEDPauseButton value="|| / >">
+</div>
 -->
+
 
 </tbody>
 

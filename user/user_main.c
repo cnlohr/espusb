@@ -107,6 +107,7 @@ extern uint32_t usb_ramtable[31];
 //Timer event.
 static void ICACHE_FLASH_ATTR myTimer(void *arg)
 {
+#if 0
 	struct usb_internal_state_struct * uis = &usb_internal_state;
 	struct usb_endpoint * e1 = &uis->eps[1];
 	struct usb_endpoint * e2 = &uis->eps[2];
@@ -114,7 +115,15 @@ static void ICACHE_FLASH_ATTR myTimer(void *arg)
 	int i;
 
 	//Send mouse and keyboard commands
-	my_ep1[2] = 1;
+	//my_ep1[0] ^= _BV(1);  // _BV(x)  ((1<<(x))
+//	my_ep1[1] = 1; //X offset
+//	my_ep1[2] = 1; //Y offset
+	//[0] == Button Bitmask ( _BV(0) == the Left button )
+	//[1] == The X offset
+	//[2] == The Y offset
+	//[3] == ?
+
+
 //	my_ep2[2] ^= 8;  //Keyboard
 
 	printf( "%d\n", e1->send );
@@ -128,6 +137,7 @@ static void ICACHE_FLASH_ATTR myTimer(void *arg)
 	e2->place_in = 0;
 	e2->size_in = sizeof( my_ep2 );
 	e2->send = 1;
+#endif
 
 	CSTick( 1 );
 }

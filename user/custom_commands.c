@@ -1,9 +1,13 @@
 //Copyright 2015 <>< Charles Lohr, see LICENSE file.
 
 #include <commonservices.h>
+#include <mystuff.h>
+#include <usb.h>
 
 extern uint8_t last_leds[512*3];
 extern int last_led_count;
+uint8_t my_ep1[4];
+uint8_t my_ep2[8];
 
 
 int ICACHE_FLASH_ATTR CustomCommand(char * buffer, int retsize, char *pusrdata, unsigned short len)
@@ -18,20 +22,45 @@ int ICACHE_FLASH_ATTR CustomCommand(char * buffer, int retsize, char *pusrdata, 
 		return buffend-buffer;
 	}
 
-	case 'l': case 'L': //LEDs
+	case 'M': case 'm': //Custom command test
 	{
-		int i, it = 0;
-		buffend += ets_sprintf( buffend, "CL:%d:", last_led_count );
-		uint16_t toledsvals = last_led_count*3;
-		if( toledsvals > 600 ) toledsvals = 600;
-		for( i = 0; i < toledsvals; i++ )
+		//CM[Mouse Button]\t[x]\t[y];
+		char * btn = len>2 ? &pusrdata[2] : 0;
+		char * mx = btn ? (char *)ets_strstr( (char*)(btn+1), "\t" ) : 0;
+		char * my = mx ? (char *)ets_strstr( (char*)(mx+1), "\t" ) : 0;
+		if( mx ) { *mx = 0; mx++; }
+		if( my ) { *my = 0; my++; } //Properly null terminate, and advance beyond the \t.
+
+		int b = my_atoi( btn );
+		int dx = my_atoi( mx );
+		int dy = my_atoi( my );
+
+		struct usb_internal_state_struct * uis = &usb_internal_state;
+		struct usb_endpoint * e1 = &uis->eps[1];
+		struct usb_endpoint * e2 = &uis->eps[2];
+
+		//First see if we've alredy sent this, if so, zero the ep data.
+		if( e1->send == 0 )
 		{
-			uint8_t samp = last_leds[it++];
-			*(buffend++) = tohex1( samp>>4 );
-			*(buffend++) = tohex1( samp&0x0f );
+			my_ep1[1] = 0;
+			my_ep1[2] = 0;
 		}
+
+		my_ep1[0] = b;
+		my_ep1[1] += dx;
+		my_ep1[2] += dy;
+
+		e1->ptr_in = my_ep1;
+		e1->place_in = 0;
+		e1->size_in = sizeof( my_ep1 );
+		e1->send = 1;
+
+
+		printf( "%d: %d :%d\n", b, dx, dy );
+		buffend += ets_sprintf( buffend, "CM" );
 		return buffend-buffer;
 	}
+
 
 
 	}
