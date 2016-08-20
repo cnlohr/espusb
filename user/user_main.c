@@ -114,7 +114,7 @@ static void ICACHE_FLASH_ATTR myTimer(void *arg)
 	int i;
 
 	//Send mouse and keyboard commands
-	my_ep1[2] = 2;
+	my_ep1[2] = 1;
 //	my_ep2[2] ^= 8;  //Keyboard
 
 	printf( "%d\n", e1->send );

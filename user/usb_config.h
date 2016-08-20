@@ -80,7 +80,7 @@ static const uint8_t config_descriptor[] = {  //Mostly stolen from a USB mouse I
 	0x81, //Endpoint Address
 	0x03, //Attributes
 	0x04,	0x00, //Size
-	5, //Interval (Was 0x0a)
+	10, //Interval (Was 0x0a)
 
 
 	//Keyboard  (It is unusual that this would be here)
@@ -107,7 +107,7 @@ static const uint8_t config_descriptor[] = {  //Mostly stolen from a USB mouse I
 	0x82, //Endpoint Address
 	0x03, //Attributes
 	0x08,	0x00, //Size (8 bytes)
-	6, //Interval (Was 0x0a)
+	10, //Interval (Was 0x0a)
 };
 
 
