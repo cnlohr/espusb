@@ -32,12 +32,15 @@ function IssueSystemMessage( msg )
 
 function QueueOperation( command, callback )
 {
-	if( workarray[command] == 1 )
-	{
-		return;
-	}
+    if( command.slice(0, 2) != "CK" ) // Allow multiple of the same keyboard event
+    {
+        if( workarray[command] == 1 )
+        {
+            return;
+        }
 
-	workarray[command] = 1;
+        workarray[command] = 1;
+    }
 	var vp = new Object();
 	vp.callback = callback;
 	vp.request = command;
