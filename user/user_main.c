@@ -99,14 +99,7 @@ static void ICACHE_FLASH_ATTR procTask(os_event_t *events)
 	e2->ptr_in = my_ep2;
 	e2->place_in = 0;
 	e2->size_in = sizeof( my_ep2 );
-
-	if( e2->send == 0 && my_ep2[2] )
-	{
-		my_ep2[2] = 0; //Makes sure to unclick keyboard if clicked.
-		e2->send = 1;
-	}
-
-	if( keypress )
+	if( keypress && e2->send == 0 )
 	{
 		my_ep2[0] = keymod;
 		my_ep2[2] = keybt;

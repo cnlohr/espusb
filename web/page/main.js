@@ -61,10 +61,20 @@ function DeltaMouse( x, y )
 }
 
 var KeyboardModifiers = 0;
+var ToProcessKeys = "";
 
-function HandleNewText()
+function ProcessKeys()
 {
-	var code = $("#KeyboardInput").val().charCodeAt(0);
+	if( ToProcessKeys.length < 1 )
+	{
+		var msg = "CK" + KeyboardModifiers + "\t" + 0; //Move modifiers back to what they were.
+		QueueOperation( msg );
+		return;
+	}
+
+	var code = ToProcessKeys.charCodeAt(0);
+	ToProcessKeys = ToProcessKeys.substr(1);
+	console.log( code );
 	var ucode = 0;
 	var CurrentModifier = KeyboardModifiers;
 	//USB Codes: http://www.freebsddiary.org/APC/usb_hid_usages.php
@@ -97,9 +107,15 @@ function HandleNewText()
 
 	if( ucode > 0 )
 	{
-		var msg = "CK" + CurrentModifier + "\t" + ucode;
-		QueueOperation( msg );
+		QueueOperation( "CK" + CurrentModifier + "\t" + ucode );
 	}
+}
+
+setInterval( ProcessKeys, 60 );
+
+function HandleNewText()
+{
+	ToProcessKeys += $("#KeyboardInput").val();
 	$("#KeyboardInput").val("");
 }
 
