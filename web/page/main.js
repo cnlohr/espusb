@@ -61,62 +61,85 @@ function DeltaMouse( x, y )
 }
 
 var KeyboardModifiers = 0;
-var ToProcessKeys = "";
 
-function ProcessKeys()
-{
-	if( ToProcessKeys.length < 1 )
-	{
-		var msg = "CK" + KeyboardModifiers + "\t" + 0; //Move modifiers back to what they were.
-		QueueOperation( msg );
-		return;
-	}
-
-	var code = ToProcessKeys.charCodeAt(0);
-	ToProcessKeys = ToProcessKeys.substr(1);
-	console.log( code );
-	var ucode = 0;
-	var CurrentModifier = KeyboardModifiers;
-	//USB Codes: http://www.freebsddiary.org/APC/usb_hid_usages.php
-	if( code >= 65 && code <= 90 )
-	{
-		ucode = code - 65 + 4; //Convert to "A"
-		CurrentModifier |= 2; //Force left shift.
-	}
-	else if( code >= 97 && code <= 122 )
-	{
-		ucode = code - 97 + 4; //Convert to "a"
-		CurrentModifier &= ~2; //Force un-left-shift
-	}
-	else if( code >= 49 && code <= 57 )
-	{
-		ucode = code - 49 + 0x1e; //Convert to "A"
-		CurrentModifier &= ~2; //Force un-left-shift
-	}
-	else if( code == 33 ) { ucode = 0x1e; CurrentModifier = 2; }
-	else if( code == 64 ) { ucode = 0x1f; CurrentModifier = 2; }
-	else if( code == 35 ) { ucode = 0x20; CurrentModifier = 2; }
-	else if( code == 36 ) { ucode = 0x21; CurrentModifier = 2; }
-	else if( code == 37 ) { ucode = 0x22; CurrentModifier = 2; }
-	else if( code == 94 ) { ucode = 0x23; CurrentModifier = 2; }
-	else if( code == 38 ) { ucode = 0x24; CurrentModifier = 2; } //&
-	else if( code == 42 ) { ucode = 0x25; CurrentModifier = 2; }
-	else if( code == 40 ) { ucode = 0x26; CurrentModifier = 2; } //(
-	else if( code == 48 ) { ucode = 0x27; CurrentModifier = 0; } //0
-	else if( code == 41 ) { ucode = 0x27; CurrentModifier = 2; }
-
-	if( ucode > 0 )
-	{
-		QueueOperation( "CK" + CurrentModifier + "\t" + ucode );
-	}
+var allUpper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+{}|:\"~<>?";
+var usblookup = {
+    0x08 : 0x2A, // BACKSPACE
+    0x09 : 0x2B, // TAB
+    0x0C : 0x28,
+    0x10 : 0xE1, // SHIFT
+    0x11 : 0xE0, // CTRL
+    0x12 : 0xE2, // ALT
+    0x14 : 0x39, // CAPS
+    0x1B : 0x29,
+    0x20 : 0x2C,
+    0xAD : 0x7F, // MUTE
 }
+var s1 = "abcdefghijklmnopqrstuvwxyz1234567890";
+var s2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()";
+for (var c = 0; c < 36; c++) {
+    usblookup[s1[c].charCodeAt(0)] = c + 4;
+    usblookup[s2[c].charCodeAt(0)] = c + 4;
+}
+var s1 = "-=[]\\ ;'`,./";
+var s2 = "_+{}| :\"~<>?";
+for (var c = 0; c < 12; c++) {
+    if (c == 5) continue; // Skip over american-only hash-tilde, since that will mess with the non-american 3-hash and grave-tilde keys.
+    usblookup[s1[c].charCodeAt(0)] = c + 0x2D;
+    usblookup[s2[c].charCodeAt(0)] = c + 0x2D;
+}
+for (var c = 0; c < 12; c++) { // F1 .. F12
+    usblookup[c + 0x70] = c + 0x3A;
+}
+//for (var c = 0; c < 12; c++) { // F13 .. F24
+//    usblookup[c + /* TODO: Figure out keycode for F13 */] = c + 0x68;
+//}
+// TODO: Numpad
 
-setInterval( ProcessKeys, 60 );
+$(document).ready(function () {
+    // Delay adding events, until the document is fully loaded
+    $("#kbd").click(function () {$("#kin").focus(); });
+    $("#kin").on("keydown keyup", function (ev) {
+        var type = ev.type == "keydown" ? 1 : 0;
+        var c = ev.originalEvent.keyCode;
+        if (c == 229) { // Android keyboard "Unidentified" (for Swipe, etc.)
+            if (type == 1) return; // Only check the text box on KeyUp events
+            KeypressMulti(this.value);
+            this.value = "";
+            return;
+        }
+        var usbId = usblookup[c];
+        console.log(ev);
+        if (usbId === undefined) return; // Not a valid HID key code
+        ev.preventDefault(); // Stop things like TAB switching fields
+        this.value = "";
+        
+        Keypress(usbId, type, ev.shiftKey);
+    });
+});
 
-function HandleNewText()
-{
-	ToProcessKeys += $("#KeyboardInput").val();
-	$("#KeyboardInput").val("");
+function Keypress(id, type, shift) {
+    if (shift) {
+        KeyboardModifiers |= 2;
+    } else {
+        KeyboardModifiers &=~2;
+    }
+    
+    if (type == 1) QueueOperation("CK" + KeyboardModifiers + "\t" + id); // Need a sanity check;
+    if (type == 0) QueueOperation("CK0\t0");
+}
+function KeypressMulti(str) {
+    [].forEach.call(str, function(char) {
+        console.log(char);
+        var modifier = 0;
+        if (allUpper.indexOf(char) >= 0) modifier = 2;
+        let id = usblookup[char.charCodeAt(0)];
+        if (id === undefined) return;
+        $("#typed").text(($("#typed").text() + char).slice(-50));
+        $("#codes").text(($("#codes").text() + " " + ("0"+id.toString(16)).slice(-2)).slice(-50))
+        QueueOperation("CK" + modifier + "\t" + id);
+    });
+    QueueOperation("CK0\t0");
 }
 
 function AttachMouseListener()
@@ -155,8 +178,6 @@ function AttachMouseListener()
 		$("#Mouse"+b).on("touchend", function(event) { HandleUpDown( ths, 0 ); } );
 		$("#Mouse"+b).on("touchstart", function(event) { HandleUpDown( ths, 1 ); } );
 	}
-
-	$("#KeyboardInput").on( "input", function() { HandleNewText() } );
 
 	console.log( "Attaching." );
 }
