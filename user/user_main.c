@@ -200,7 +200,21 @@ end:\n\
 }
 #endif
 
-void user_init(void)
+void user_rf_cal_sector_set()
+{
+}
+
+void *memchr(const unsigned char *s, int c, size_t n)
+{
+	int i;
+	for( i = 0; i < n; i++, s++ )
+	{
+		if( *s == c ) return s;
+	}
+	return 0;
+}
+
+void ICACHE_FLASH_ATTR user_init(void)
 {
 	uart_init(BIT_RATE_115200, BIT_RATE_115200);
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U,FUNC_GPIO2);
@@ -223,6 +237,19 @@ void user_init(void)
 	system_restart();
 	while(1);
 #endif
+
+	//Print reboot cause
+	
+	struct rst_info * r = system_get_rst_info();
+	printf( "Reason: %p\n", r->reason );
+	printf( "Exec  : %p\n", r->exccause );
+	printf( "epc1  : %p\n", r->epc1 );
+	printf( "epc2  : %p\n", r->epc2 );
+	printf( "epc3  : %p\n", r->epc3 );
+	printf( "excvaddr:%p\n", r->excvaddr );
+	printf( "depc: %p\n", r->depc );
+
+
 
 //Uncomment this to force a system restore.
 //	system_restore();

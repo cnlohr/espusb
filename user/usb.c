@@ -71,27 +71,30 @@ void usb_pid_handle_in( uint32_t this_token, struct usb_internal_state_struct * 
 	{
 		sendnow[1] = 0b11000011; //DATA0
 	}
+		PIN_OUT_SET = _BV(DEBUGPIN);
 
-	if( !e->send || !e->ptr_in || e->ptr_in == EMPTY_SEND_BUFFER )  //Tricky: Empty packet.
+	if( tosend == 0 || !e->send || !e->ptr_in || e->ptr_in == EMPTY_SEND_BUFFER )  //Tricky: Empty packet.
 	{
 
 		//Tricky: Control messages are not allowed to send NAKs.  We /have/ to send an empty packet for them if no more data is available.
 		//With endpoints, proper, it's okay to send NAKs.
+
 		if( endp == 0 )
 		{
-			usb_send_data( sendnow, 2, 3 );  //Force a CRC
+			sendnow[2] = 0;
+			sendnow[3] = 0; //CRC = 0
+			usb_send_data( sendnow, 4, 2 );  //Force a CRC
 			e->ptr_in = 0;
 		}
 		else
 		{
-			uint8_t sendword[2] = { 0x80, 0x5a };  //Empty data. "NAK"
-			usb_send_data( sendword, 2, 2 );
+			sendnow[1] = 0x5a; //Empty data (NAK)
+			usb_send_data( sendnow, 2, 2 );
 		}
 	}
 	else
 	{
-		if( tosend )
-			ets_memcpy( sendnow+2, e->ptr_in + e->place_in, tosend );
+		ets_memcpy( sendnow+2, e->ptr_in + e->place_in, tosend );
 		usb_send_data( sendnow, tosend+2, 0 );
 		e->advance_in = tosend;
 	}
@@ -210,8 +213,10 @@ void usb_pid_handle_ack( uint32_t this_token, struct usb_internal_state_struct *
 	if( !e ) return;
 
 
+
 	e->toggle_in = !e->toggle_in;
 	e->place_in += e->advance_in;
+	e->advance_in = 0;
 	if( e->place_in == e->size_in )
 	{
 		e->send = 0;
