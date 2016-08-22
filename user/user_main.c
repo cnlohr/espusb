@@ -7,11 +7,10 @@
 #include "uart.h"
 #include "osapi.h"
 #include "espconn.h"
-#include "mystuff.h"
 #include "ws2812_i2s.h"
 #include "commonservices.h"
 #include <mdns.h>
-#include <mystuff.h>
+#include <esp82xx.h>
 #include <gpio.h>
 #include <common.h>
 #include <usb.h>

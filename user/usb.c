@@ -2,7 +2,7 @@
 
 #include "usb.h"
 #include <string.h>
-#include <mystuff.h>
+#include <esp82xx.h>
 #include <eagle_soc.h>
 #include <gpio.h>
 #include "usb_table_1bit.h"

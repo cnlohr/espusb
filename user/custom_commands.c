@@ -1,7 +1,7 @@
 //Copyright 2015 <>< Charles Lohr, see LICENSE file.
 
 #include <commonservices.h>
-#include <mystuff.h>
+#include <esp82xx.h>
 #include <usb.h>
 
 extern uint8_t last_leds[512*3];
