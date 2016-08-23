@@ -10,7 +10,7 @@
 #include "ws2812_i2s.h"
 #include "commonservices.h"
 #include <mdns.h>
-#include <esp82xx.h>
+#include <esp82xxutil.h>
 #include <gpio.h>
 #include <common.h>
 #include <usb.h>
@@ -201,16 +201,6 @@ end:\n\
 
 void user_rf_cal_sector_set()
 {
-}
-
-void *memchr(const unsigned char *s, int c, size_t n)
-{
-	int i;
-	for( i = 0; i < n; i++, s++ )
-	{
-		if( *s == c ) return s;
-	}
-	return 0;
 }
 
 void ICACHE_FLASH_ATTR user_init(void)
