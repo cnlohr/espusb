@@ -1,5 +1,5 @@
-include user.cfg
 -include esp82xx/common.mf
+include user.cfg
 -include esp82xx/main.mf
 
 SRCS += 	user/usb_asm_1bit.S \
