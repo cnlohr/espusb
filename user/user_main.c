@@ -43,7 +43,7 @@ os_event_t    procTaskQueue[procTaskQueueLen];
 
 
 //Awkward example with use of control messages to get data to/from device.
-uint8_t user_control[150];
+uint8_t user_control[144]; //Enough for FW######## ### [128 bytes of data] [null]
 int     user_control_length_acc; //From host to us.
 int     user_control_length_ret; //From us to host.
 

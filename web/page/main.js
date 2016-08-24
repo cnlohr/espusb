@@ -99,6 +99,24 @@ for (var c = 0; c < 12; c++) {
 //}
 // TODO: Numpad
 
+function KeyModifiers()
+{
+	var mod = 0;
+	for( var i = 0; i < 4; i++ )
+	{
+		if( $("#mod"+i).is(":checked") ) mod |= 1<<i;
+	}
+	KeyboardModifiers = mod;
+    keyops.push("CK" + KeyboardModifiers + "\t0");
+}
+
+function SpecKey( k, code )
+{
+	console.log( "::::" + code );
+    keyops.push("CK" + KeyboardModifiers + "\t" + code );
+    keyops.push("CK" + KeyboardModifiers + "\t0");
+}
+
 $(document).ready(function () {
     // Delay adding events, until the document is fully loaded
     $("#kbd").click(function () {$("#kin").focus(); });
@@ -119,6 +137,18 @@ $(document).ready(function () {
         //console.log( usbId + " " +  type + " " + ev.shiftKey );
         Keypress(usbId, type, ev.shiftKey);
     });
+
+	for( var i = 0; i < 4; i++ )
+	{
+		$("#mod"+i).change(KeyModifiers);
+	}
+
+	var codes = [ 41, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 72, 76, 75, 78, 74, 77, 40, 128, 129 ];
+	for( var i = 0; i < 23; i++ )
+	{
+		let code = codes[i];
+		$("#specialpress"+i).click( function(k) { SpecKey(k, code ); } );
+	}
 });
 
 var keyops = [];
@@ -133,26 +163,27 @@ function KeyInterval()
 setInterval( KeyInterval, 15 );
 
 function Keypress(id, type, shift) {
+	var mods = KeyboardModifiers;
     if (shift) {
-        KeyboardModifiers |= 2;
+        mods |= 2;
     } else {
-        KeyboardModifiers &=~2;
+        mods &=~2;
     }
     
-    if (type == 1) keyops.push("CK" + KeyboardModifiers + "\t" + id); // Need a sanity check;
-    if (type == 0) keyops.push("CK0\t0");
+    if (type == 1) keyops.push("CK" + mods + "\t" + id); // Need a sanity check;
+    if (type == 0) keyops.push("CK" + KeyboardModifiers + "\t0");
 }
 function KeypressMulti(str) {
     [].forEach.call(str, function(char) {
         //console.log(char);
-        var modifier = 0;
-        if (allUpper.indexOf(char) >= 0) modifier = 2;
+        var modifier = KeyboardModifiers;
+        if (allUpper.indexOf(char) >= 0) modifier |= 2;
         let id = usblookup[char.charCodeAt(0)];
         if (id === undefined) return;
         $("#typed").text(($("#typed").text() + char).slice(-50));
         $("#codes").text(($("#codes").text() + " " + ("0"+id.toString(16)).slice(-2)).slice(-50))
         keyops.push("CK" + modifier + "\t" + id);
-	    keyops.push("CK0\t0");
+	    keyops.push("CK" + KeyboardModifiers + "\t0");
     });
 }
 

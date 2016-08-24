@@ -61,7 +61,6 @@ int ICACHE_FLASH_ATTR CustomCommand(char * buffer, int retsize, char *pusrdata, 
 		e1->size_in = sizeof( my_ep1 );
 		e1->send = 1;
 
-		printf( "%d: %d :%d\n", b, dx, dy );
 		buffend += ets_sprintf( buffend, "CM" );
 		return buffend-buffer;
 	}

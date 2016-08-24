@@ -32,15 +32,12 @@ function IssueSystemMessage( msg )
 
 function QueueOperation( command, callback )
 {
-    if( command.slice(0, 2) != "CK" ) // Allow multiple of the same keyboard event
-    {
-        if( workarray[command] == 1 )
-        {
-            return;
-        }
+	if( workarray[command] == 1 )
+	{
+		return;
+	}
 
-        workarray[command] = 1;
-    }
+	workarray[command] = 1;
 	var vp = new Object();
 	vp.callback = callback;
 	vp.request = command;
@@ -50,12 +47,20 @@ function QueueOperation( command, callback )
 
 function init()
 {
+	GPIOlines = '';
+	for(var i=0; i<16; ++i)
+		GPIOlines += "<td align=center>"+ i
+			+ "<input type=button id=ButtonGPIO"+ i +" value=0 onclick=\"TwiddleGPIO("+ i +");\">"
+			+ "<input type=button id=BGPIOIn"+ i +" value=In onclick=\"GPIOInput("+ i +");\" class=\"inbutton\">"
+			+ "</td>";
+
 	$('#MainMenu > tbody:first-child').before( "\
 		<tr><td width=1> \
 		<input type=submit onclick=\"ShowHideEvent( 'SystemStatus' ); SystemInfoTick();\" value='System Status' id=SystemStatusClicker></td><td> \
 		<div id=SystemStatus class='collapsible'> \
 		<table width=100% border=1><tr><td> \
-<div id=output></div><div id=systemsettings></div> \n		</td></tr></table></div></td></tr>" );
+<div id=output></div><div id=systemsettings></div> \n		</td></tr></table></div></td></tr>"
+	);
 
 	$('#MainMenu > tbody:last-child').after( "\
 		<tr><td width=1> \
@@ -88,28 +93,17 @@ function init()
 		<tr><td width=1> \
 		<input type=submit onclick=\"ShowHideEvent( 'GPIOs' ); GPIODataTicker();\" value=\"GPIOs\"></td><td> \
 		<div id=GPIOs class=\"collapsible\"> \
-		<table width=100% border=1><tr> \
-		<td align=center>0<input type=button id=ButtonGPIO0 value=0 onclick=\"TwiddleGPIO(0);\"><input type=button id=BGPIOIn0 value=In onclick=\"GPIOInput(0);\" class=\"inbutton\"></td> \
-		<td align=center>1<input type=button id=ButtonGPIO1 value=0 onclick=\"TwiddleGPIO(1);\"><input type=button id=BGPIOIn1 value=In onclick=\"GPIOInput(1);\" class=\"inbutton\"></td> \
-		<td align=center>2<input type=button id=ButtonGPIO2 value=0 onclick=\"TwiddleGPIO(2);\"><input type=button id=BGPIOIn2 value=In onclick=\"GPIOInput(2);\" class=\"inbutton\"></td> \
-		<td align=center>3<input type=button id=ButtonGPIO3 value=0 onclick=\"TwiddleGPIO(3);\"><input type=button id=BGPIOIn3 value=In onclick=\"GPIOInput(3);\" class=\"inbutton\"></td> \
-		<td align=center>4<input type=button id=ButtonGPIO4 value=0 onclick=\"TwiddleGPIO(4);\"><input type=button id=BGPIOIn4 value=In onclick=\"GPIOInput(4);\" class=\"inbutton\"></td> \
-		<td align=center>5<input type=button id=ButtonGPIO5 value=0 onclick=\"TwiddleGPIO(5);\"><input type=button id=BGPIOIn5 value=In onclick=\"GPIOInput(5);\" class=\"inbutton\"></td> \
-		<td>...</td> \
-		<td align=center>12<input type=button id=ButtonGPIO12 value=0 onclick=\"TwiddleGPIO(12);\"><input type=button id=BGPIOIn12 value=In onclick=\"GPIOInput(12);\" class=\"inbutton\"></td> \
-		<td align=center>13<input type=button id=ButtonGPIO13 value=0 onclick=\"TwiddleGPIO(13);\"><input type=button id=BGPIOIn13 value=In onclick=\"GPIOInput(13);\" class=\"inbutton\"></td> \
-		<td align=center>14<input type=button id=ButtonGPIO14 value=0 onclick=\"TwiddleGPIO(14);\"><input type=button id=BGPIOIn14 value=In onclick=\"GPIOInput(14);\" class=\"inbutton\"></td> \
-		<td align=center>15<input type=button id=ButtonGPIO15 value=0 onclick=\"TwiddleGPIO(15);\"><input type=button id=BGPIOIn15 value=In onclick=\"GPIOInput(15);\" class=\"inbutton\"></td> \
-		</tr></table></div></td></tr>\
+		<table width=100% border=1><tr>" +
+ 		GPIOlines
+		+ "</tr></table></div></td></tr>\
 \
 		<tr><td width=1>\
 		<input type=submit onclick=\"ShowHideEvent( 'SystemReflash' );\" value=\"System Reflash\"></td><td>\
 		<div id=SystemReflash class=\"collapsible\">\
 		<div id=InnerSystemReflash class=\"dragandrophandler\">\
 		<input id=\"dragndropersystem\" type=\"file\" multiple> <div id=innersystemflashtext>Drop or browse for system (0x000.. 0x400...) or web (.mpfs) reflash files.</div>\
-		</div></div></td></tr>\
-");
-		
+		</div></div></td></tr>"
+	);
 
 	MakeDragDrop( "InnerSystemReflash", DragDropSystemFiles );
 	$("#dragndropersystem").change(function() { DragDropSystemFiles(this.files ); });
@@ -227,7 +221,7 @@ function onMessage(evt)
 		if( evt.data.length > 2 )
 		{
 			var wxresp = evt.data.substr(2).split("\t");
-			output.innerHTML = "<p>Messages: " + msg + "</p><p>RSSI: " + wxresp[0] + " / IP: " + ((wxresp.length>1)?HexToIP( wxresp[1] ):"") + "</p>";	
+			output.innerHTML = "<p>Messages: " + msg + "</p><p>RSSI: " + wxresp[0] + " / IP: " + ((wxresp.length>1)?HexToIP( wxresp[1] ):"") + "</p>";
 		}
 	}
 
@@ -293,27 +287,27 @@ function IssueCustomCommand()
 function MakeDragDrop( divname, callback )
 {
 	var obj = $("#" + divname);
-	obj.on('dragenter', function (e) 
+	obj.on('dragenter', function (e)
 	{
 		e.stopPropagation();
 		e.preventDefault();
 		$(this).css('border', '2px solid #0B85A1');
 	});
 
-	obj.on('dragover', function (e) 
+	obj.on('dragover', function (e)
 	{
 		e.stopPropagation();
 		e.preventDefault();
 	});
 
-	obj.on('dragend', function (e) 
+	obj.on('dragend', function (e)
 	{
 		e.stopPropagation();
 		e.preventDefault();
 		$(this).css('border', '2px dotted #0B85A1');
 	});
 
-	obj.on('drop', function (e) 
+	obj.on('drop', function (e)
 	{
 		$(this).css('border', '2px dotted #0B85A1');
 		e.preventDefault();
@@ -384,7 +378,7 @@ function SysTickBack(req,data)
 	}
 	$("#ServiceName").html( params[5] );
 	$("#FreeHeap").html( params[6] );
-	
+
 	QueueOperation( "BL", CallbackForPeers );
 }
 
@@ -426,7 +420,7 @@ function InitSystemTicker()
 		<INPUT TYPE=SUBMIT VALUE=Reboot ONCLICK='QueueOperation(\"IB\");'>\
 		<P>Search for others:</P>\
 		<DIV id=peers></DIV>";
-	$("#SystemName").on("input propertychange paste",function(){snchanged = true; $("#SystemName").addClass( "unsaved-input"); });  
+	$("#SystemName").on("input propertychange paste",function(){snchanged = true; $("#SystemName").addClass( "unsaved-input"); });
 	$("#SystemDescription").on("input propertychange paste",function(){sdchanged = true;$("#SystemDescription").addClass( "unsaved-input"); });
 }
 
@@ -492,7 +486,7 @@ function WifiDataTicker()
 			QueueOperation( "WI", function(req,data)
 			{
 				var params = data.split( "\t" );
-			
+
 				var opmode = Number( params[0].substr(2) );
 				document.wifisection.wifitype.value = opmode;
 				document.wifisection.wificurname.value = params[1];
@@ -508,6 +502,7 @@ function WifiDataTicker()
 		QueueOperation( "WR", function(req,data) {
 			var lines = data.split( "\n" );
 			var innerhtml;
+			if( data[0] == '!' ) return;  //If no APs, don't deal with list.
 
 			if( lines.length < 3 )
 			{
@@ -549,7 +544,7 @@ function WifiDataTicker()
 
 function ChangeWifiConfig()
 {
-	
+
 	var st = "W";
 	st += document.wifisection.wifitype.value;
 	st += "\t" + document.wifisection.wificurname.value;
@@ -663,7 +658,7 @@ function SystemPushImageProgress( is_ok, comment, pushop )
 			pushop.ctx.file1md5 = faultylabs.MD5( pushop.paddata ).toLowerCase();
 			var reader = new FileReader();
 
-			reader.onload = function(e) { 
+			reader.onload = function(e) {
 				$("#innersystemflashtext").html( "Pusing second half..." );
 				PushImageTo( e.target.result, flash_scratchpad_at + 0x40000, SystemPushImageProgress, pushop.ctx );
 			}
@@ -681,7 +676,7 @@ function SystemPushImageProgress( is_ok, comment, pushop )
 
 			var stf = "FM" + flash_scratchpad_at + "\t0\t" + f1s + "\t" + f1m + "\t" + (flash_scratchpad_at+0x40000) + "\t" + 0x40000 + "\t" + f2s + "\t" + f2m + "\n";
 			var fun = function( fsrd, flashresponse ) { $("#innerflashtext").html( (flashresponse[0] == '!')?"Flashing failed.":"Flash success." ) };
-			QueueOperation( stf, fun); 
+			QueueOperation( stf, fun);
 		}
 
 		return false;
@@ -692,7 +687,7 @@ function SystemPushImageProgress( is_ok, comment, pushop )
 
 
 function WebPagePushImageFunction( ok, comment, pushop )
-{ 
+{
 	if( pushop.place == pushop.padlen )
 	{
 		$("#innersystemflashtext").html("Push complete. Reload page.");
@@ -703,7 +698,7 @@ function WebPagePushImageFunction( ok, comment, pushop )
 	}
 
 	return true;
-} 
+}
 
 function DragDropSystemFiles( file )
 {
@@ -721,7 +716,7 @@ function DragDropSystemFiles( file )
 
 		var reader = new FileReader();
 
-		reader.onload = function(e) { 
+		reader.onload = function(e) {
 			PushImageTo( e.target.result, mpfs_start_at, WebPagePushImageFunction );
 		}
 
@@ -765,7 +760,7 @@ function DragDropSystemFiles( file )
 
 		var reader = new FileReader();
 
-		reader.onload = function(e) { 
+		reader.onload = function(e) {
 			var ctx = new Object();
 			ctx.file1 = file1;
 			ctx.file2 = file2;
