@@ -143,8 +143,8 @@ $(document).ready(function () {
 		$("#mod"+i).change(KeyModifiers);
 	}
 
-	var codes = [ 41, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 72, 76, 75, 78, 74, 77, 40, 128, 129 ];
-	for( var i = 0; i < 23; i++ )
+	var codes = [ 41, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 72, 76, 75, 78, 74, 77, 40, 128, 129, 79, 80, 81, 82 ];
+	for( var i = 0; i < codes.length; i++ )
 	{
 		let code = codes[i];
 		$("#specialpress"+i).click( function(k) { SpecKey(k, code ); } );
