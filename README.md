@@ -18,6 +18,8 @@ More info hopefully coming soon.
 
 ![Schematic](schematic.png)
 
+NOTE: GPIO12/14 do not need to be connected to ground. GPIO15 may be connected via a pull-down resistor.  For stability, a pull-up on GPIO2 is recommended.
+
 Also, checkout the hardware/ folder.  It has kicad designs for my tiny board.  Though they are for the ESP8285, the same pin configuration may be used to run on the ESP8266.
 
 ## Memory Usage
