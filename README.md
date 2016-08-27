@@ -14,6 +14,12 @@ Additionally, this only operates with low-speed USB (1.5 MBit/s), ideal for maki
 
 More info hopefully coming soon.
 
+## Hardware
+
+![Schematic](schematic.png)
+
+Also, checkout the hardware/ folder.  It has kicad designs for my tiny board.  Though they are for the ESP8285, the same pin configuration may be used to run on the ESP8266.
+
 ## Memory Usage
 
 This is typical memory usage for a two-endpoint (in addition to EP0) device.
@@ -24,29 +30,31 @@ Total SRAM: 232 bytes + Descriptors (~317 bytes)
 
 Total Flash/IRAM (Only iram, tables and usb_init can be stuck in slow flash): 1422 bytes
 
-
-
 More details:
 
 SRAM:
 
+```
 0000007c D usb_ramtable
 0000006c B usb_internal_state
-
+```
 IRAM:
 
 You must write: usb_handle_custom_control - the demos here hook it up to the command engine which allows self flashing on 1MB+ parts.
 
 C functions:
+```
 0000002a T usb_pid_handle_ack
 0000014f T usb_pid_handle_data
 00000022 T usb_pid_handle_out
 000000e9 T usb_pid_handle_in
 00000002 T usb_pid_handle_sof
 00000039 T usb_pid_handle_setup
-
+```
 From/To (in ASM):
+```
 40100f20 t usb_asm_start
 401011ef t usb_asm_end
 Total length of ASM: 2cf
+```
 
