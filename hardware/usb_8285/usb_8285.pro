@@ -1,4 +1,4 @@
-update=Fri 26 Aug 2016 12:46:31 AM EDT
+update=Sat 27 Aug 2016 12:58:11 AM EDT
 last_client=kicad
 [pcbnew]
 version=1
@@ -346,3 +346,13 @@ LibName152=/home/cnlohr/electrical/kicad/1206network
 LibName153=/home/cnlohr/electrical/kicad/25q40b
 LibName154=/home/cnlohr/electrical/kicad/23lc1024
 LibName155=/home/cnlohr/electrical/kicad/2.4GHZ_2450FB15L0001
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=
+SpiceForceRefPrefix=0
+SpiceUseNetNumbers=0
+LabSize=315
