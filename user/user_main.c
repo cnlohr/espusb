@@ -210,8 +210,7 @@ void ICACHE_FLASH_ATTR user_init(void)
     PIN_DIR_OUTPUT = _BV(2);
 	PIN_OUT_SET = _BV(2);
 
-	//ets_delay_us(200000);
-	//uart0_sendStr("\r\n\033c" );
+	uart0_sendStr("\r\n\033c" ); //Clear screen
 	uart0_sendStr("esp8266 test usb driver\r\n");
 	system_update_cpu_freq( 80 );
 //#define PROFILE
