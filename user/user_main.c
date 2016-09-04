@@ -260,7 +260,7 @@ void ICACHE_FLASH_ATTR user_init(void)
 	AddMDNSName( "esp82xx" );
 	AddMDNSName( "espusb" );
 	AddMDNSService( "_http._tcp", "An ESP8266 Webserver", 80 );
-	AddMDNSService( "_cn8266._udp", "ESP8266 Backend", 7878 );
+	AddMDNSService( "_esp82xx._udp", "ESP8266 Backend", 7878 );
 
 	//Add a process
 	system_os_task(procTask, procTaskPrio, procTaskQueue, procTaskQueueLen);
