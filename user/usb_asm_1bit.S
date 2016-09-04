@@ -515,3 +515,4 @@ DEBUG_HIGH
 	ret.n
 
 usb_asm_end:
+	.byte  0x00, 176, 0x13

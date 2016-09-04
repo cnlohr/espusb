@@ -206,9 +206,6 @@ void user_rf_cal_sector_set()
 void ICACHE_FLASH_ATTR user_init(void)
 {
 	uart_init(BIT_RATE_115200, BIT_RATE_115200);
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U,FUNC_GPIO2);
-    PIN_DIR_OUTPUT = _BV(2);
-	PIN_OUT_SET = _BV(2);
 
 	uart0_sendStr("\r\n\033c" ); //Clear screen
 	uart0_sendStr("esp8266 test usb driver\r\n");
@@ -260,7 +257,7 @@ void ICACHE_FLASH_ATTR user_init(void)
 		READ_PERI_REG(RTC_GPIO_ENABLE) & (uint32)0xfffffffe);       //out disable
 
 	SetServiceName( "espusb" );
-	AddMDNSName( "cn8266" );
+	AddMDNSName( "esp82xx" );
 	AddMDNSName( "espusb" );
 	AddMDNSService( "_http._tcp", "An ESP8266 Webserver", 80 );
 	AddMDNSService( "_cn8266._udp", "ESP8266 Backend", 7878 );
@@ -271,7 +268,7 @@ void ICACHE_FLASH_ATTR user_init(void)
 	//Timer example
 	os_timer_disarm(&some_timer);
 	os_timer_setfn(&some_timer, (os_timer_func_t *)myTimer, NULL);
-	os_timer_arm(&some_timer, 100, 1);
+	os_timer_arm(&some_timer, SLOWTICK_MS, 1);
 
 	printf( "Boot Ok.\n" );
 

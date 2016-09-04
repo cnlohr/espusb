@@ -5,7 +5,7 @@
 #define ENDPOINTS 3
 
 //Defines a pin that is useful for debugging USB on a logic analyzer
-#define DEBUGPIN 2
+//#define DEBUGPIN 2
 
 //DPLUS and DMINUS are not actually used except for setting things up.
 #define DPLUS 5

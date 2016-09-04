@@ -71,7 +71,6 @@ void usb_pid_handle_in( uint32_t this_token, struct usb_internal_state_struct * 
 	{
 		sendnow[1] = 0b11000011; //DATA0
 	}
-		PIN_OUT_SET = _BV(DEBUGPIN);
 
 	if( tosend == 0 || !e->send || !e->ptr_in || e->ptr_in == EMPTY_SEND_BUFFER )  //Tricky: Empty packet.
 	{
