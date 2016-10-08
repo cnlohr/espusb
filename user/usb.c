@@ -12,13 +12,15 @@ struct usb_internal_state_struct usb_internal_state __attribute__((aligned(4)));
 #define ENDPOINT0_SIZE 8 //Fixed for USB 1.1, Low Speed.
 
 #define INSTANCE_DESCRIPTORS
-#include "usb_config.h"
+#include <usb_config.h>
 
 //Received a setup for a specific endpoint.
 void usb_pid_handle_setup( uint32_t this_token, struct usb_internal_state_struct * ist )
 {
 	uint8_t addr = (this_token>>8) & 0x7f;
 	uint8_t endp = (this_token>>15) & 0xf;
+
+	ist->there_is_a_host = 1;
 
 	if( endp >= ENDPOINTS ) goto end;
 	if( addr != 0 && addr != ist->my_address ) goto end;
@@ -246,6 +248,5 @@ void  ICACHE_FLASH_ATTR usb_init()
 	gp[GPIO_OFFSET_DIR_IN/4] = _BV(DPLUS) | _BV(DMINUS);
 
     ETS_GPIO_INTR_ENABLE();
-
 }
 

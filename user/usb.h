@@ -1,7 +1,7 @@
 #ifndef _USB_H
 #define _USB_H
 
-#include "usb_config.h"
+#include <usb_config.h>
 
 #define USB_LOW_SPEED
 
@@ -21,17 +21,17 @@
 struct usb_endpoint
 {
 	const uint8_t * ptr_in;		// Pointer to "IN" data (US->PC)
-	uint8_t size_in;		// Total size of the structure pointed to by ptr_in
-	uint8_t advance_in;		// How much data was sent this packet? (How much to advance in ack)
-	uint8_t place_in;		// Where in the ptr_in we are currently pointing.
+	uint16_t size_in;		// Total size of the structure pointed to by ptr_in
+	uint16_t advance_in;		// How much data was sent this packet? (How much to advance in ack)
+	uint16_t place_in;		// Where in the ptr_in we are currently pointing.
 	uint8_t toggle_in; 		// DATA0 or DATA1?
 	uint8_t send;			// Sets back to 0 when done sending.
 
 	uint8_t * ptr_out;
 	int * transfer_done_ptr;  //Written to # of bytes received when a datagram is done.
-	uint8_t max_size_out;
+	uint16_t max_size_out;
+	uint16_t got_size_out;
 	uint8_t toggle_out;  //Out PC->US
-	uint8_t got_size_out;
 };
 
 struct usb_internal_state_struct
@@ -44,7 +44,6 @@ struct usb_internal_state_struct
 	uint32_t last_token;
 	uint32_t debug;
 
-
 	struct usb_endpoint * ce;  //Current endpoint (set by IN/OUT PIDs)
 	struct usb_endpoint eps[ENDPOINTS];
 
@@ -52,6 +51,7 @@ struct usb_internal_state_struct
 
 	uint32_t my_address;	//For the current address set up by the setup portion of USB.
 	uint32_t setup_request; //1 if needing setup packet.
+	uint32_t there_is_a_host; //1 if there is a host at all, i.e. enumeration attempts have begun.
 };
 
 extern struct usb_internal_state_struct usb_internal_state __attribute__((aligned(4)));
