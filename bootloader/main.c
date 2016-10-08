@@ -11,9 +11,11 @@
 uint8_t usb_custom_acc[CUSTOM_BUFFERSIZE];
 uint8_t usb_custom_ret[CUSTOM_BUFFERSIZE];
 
+
+//This might look a little odd, but, keep in mind that the xtensa architecture can
+//access class-like variables much faster than it can access globals.
 struct USBControlStruct
 {
-//Awkward example with use of control messages to get data to/from device.
 	uint8_t *	acc;
 	short		acc_index;
 	short		acc_value;
@@ -26,6 +28,9 @@ struct USBControlStruct
 } cctrl;
 
 
+//This function is called-back from within the USB stack whenever a control message is begun.
+//This code must execute VERY quickly.  So, no copying things or doddling around.  All of that must
+//be done in the main thread.
 void usb_handle_custom_control( int bmRequestType, int bRequest, int wLength, struct usb_internal_state_struct * ist )
 {
 	struct usb_urb * s = (struct usb_urb *)ist->usb_buffer;
@@ -150,6 +155,8 @@ int main()
 		//Don't know why.  Without this, it breaks.
 		ets_delay_us( 1 );
 		i++;
+
+		//If there is no host connected, and it's been 1/2 second, bail.
 		if( i == 400000 && !usb_internal_state.there_is_a_host )
 		{
 			printf( "No host (Should do normal boot)\n" );
