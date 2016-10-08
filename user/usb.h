@@ -26,6 +26,7 @@ struct usb_endpoint
 	uint16_t place_in;		// Where in the ptr_in we are currently pointing.
 	uint8_t toggle_in; 		// DATA0 or DATA1?
 	uint8_t send;			// Sets back to 0 when done sending.
+	int * transfer_in_done_ptr;
 
 	uint8_t * ptr_out;
 	int * transfer_done_ptr;  //Written to # of bytes received when a datagram is done.

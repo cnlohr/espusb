@@ -6,42 +6,64 @@
 #include "gpio.h"
 #include <usb.h>
 
+#define CUSTOM_BUFFERSIZE 2100
+
+uint8_t usb_custom_acc[CUSTOM_BUFFERSIZE];
+uint8_t usb_custom_ret[CUSTOM_BUFFERSIZE];
+
+struct USBControlStruct
+{
 //Awkward example with use of control messages to get data to/from device.
-uint8_t user_control_acc[2100];
-uint8_t user_control_ret[2100];
-int     user_control_length_acc = 0; //From host to us.
-int     user_control_length_ret = 0; //From us to host.
-int hit = 0;
+	uint8_t *	acc;
+	short		acc_index;
+	short		acc_value;
+	uint8_t		acc_request;
+	int			length_acc;
+
+	uint8_t *	ret;
+	int			length_ret;
+	int			ret_done;
+} cctrl;
+
 
 void usb_handle_custom_control( int bmRequestType, int bRequest, int wLength, struct usb_internal_state_struct * ist )
 {
 	struct usb_urb * s = (struct usb_urb *)ist->usb_buffer;
 	struct usb_endpoint * e = ist->ce;
+	struct USBControlStruct * cc = &cctrl;
 
 	if( bmRequestType == 0x80 )
 	{
-		if( bRequest == 0xa7) //US TO HOST "in"
+		if( bRequest == 0xa0) //US TO HOST "in"
 		{
-			if( user_control_length_ret )
+			if( cc->length_ret )
 			{
-				e->ptr_in = user_control_ret;
-				e->size_in = user_control_length_ret;
+				e->ptr_in = cc->ret;
+				e->size_in = cc->length_ret;
+				e->transfer_in_done_ptr == &cc->ret_done;
 				if( wLength < e->size_in ) e->size_in = wLength;
-				hit = e->size_in;
-				user_control_length_ret = 0;
+				cc->length_ret = 0;
 			}
 		}
 	}
 
 	if( bmRequestType == 0x00 )
 	{
-		if( bRequest == 0xa6 && user_control_length_acc == 0 ) //HOST TO US "out"
+		if( bRequest >= 0xa0 && bRequest < 0xc0 && cc->length_acc == 0 ) //HOST TO US "out" Only permit if we've already cleared out the message.
 		{
-			e->ptr_out = user_control_acc;
-			e->max_size_out = sizeof( user_control_acc );
+			cc->acc_request = bRequest;
+			cc->acc_value = s->wValue;
+			cc->acc_index = s->wIndex;
+			e->ptr_out = cc->acc;
+			e->max_size_out = CUSTOM_BUFFERSIZE;
 			if( e->max_size_out > wLength ) e->max_size_out = wLength;
 			e->got_size_out = 0;
-			e->transfer_done_ptr = &user_control_length_acc;
+			e->transfer_done_ptr = &cc->length_acc;
+		}
+		else
+		{
+			e->ptr_out = 0;
+			e->max_size_out = 0;
 		}
 
 	}
@@ -53,10 +75,12 @@ void usb_handle_custom_control( int bmRequestType, int bRequest, int wLength, st
 int main()
 {
 	int i = 0;
-	user_control_length_acc = 0; //From host to us.
-	user_control_length_ret = 0; //From us to host.
-
+	struct USBControlStruct * cc = &cctrl;
 	romlib_init();
+
+	cc->acc = usb_custom_acc;
+	cc->ret = usb_custom_ret;
+	cc->ret_done = 1;
 
 	//PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U,FUNC_GPIO2);
 	//PIN_DIR_OUTPUT = _BV(2); //Enable GPIO2 light off.
@@ -70,20 +94,66 @@ int main()
 		//You can return data by putting it in user_control and setting user_control_length_ret
 		//To determine if you are connected, check usb_internal_state.there_is_a_host
 
-		user_control_acc[1] = 0;
-		printf( "/%d(%d) MSG:%s There_Is_Host: %d\n", user_control_length_acc, hit, user_control_acc, usb_internal_state.there_is_a_host );
-		user_control_length_acc = 0; //Clear out the incoming data since we just got it.
 
-		//Write some stuff into the outgoing data.
-		user_control_ret[0] = 'K';
-//		user_control_length_ret = 2080;
+		if( cc->length_acc && cc->ret_done ) //XXX Todo: Make sure our response was received.
+		{
+			switch( cc->acc_request )
+			{
+			case 0xa0: //Echo
+				ets_memcpy( cc->ret, cc->acc, cc->length_acc );
+				cc->ret = usb_custom_ret;
+				cc->length_ret = cc->length_acc;
+				cc->length_acc = 0; //Clear out the incoming data once done processing.
+				printf( "/%d MSG:%s %d %02x:%04x:%04x\n", cc->length_acc, cc->acc, usb_internal_state.there_is_a_host,cc->acc_request,cc->acc_value,cc->acc_index );
+				break;
+			case 0xa1: //Read RAM.
+				cc->ret = (uint8_t*)((cc->acc_value<<16) | cc->acc_index);
+				cc->length_ret = cc->length_acc;
+				cc->length_acc = 0;
+				break;
+			case 0xa2: //Read FLASH
+			{
+				int toread = (cc->acc_value>>8)*16;
+				int addy = (((cc->acc_value & 0x0f)<<16) | cc->acc_index)*4;
+				cc->ret = usb_custom_ret;
+				SPIRead( addy, (uint32_t*)cc->ret, toread );
+				cc->length_ret = toread;
+				cc->length_acc = 0;
+				break;
+			}
+			case 0xa3: //Write FLASH 
+			{
+				int addy = (((cc->acc_value & 0x0f)<<16) | cc->acc_index)*4;
+				cc->ret = usb_custom_ret;
+				SPIWrite( addy, (uint32_t*)cc->acc, cc->length_acc & 0xfffc );
+				cc->length_ret = 1;
+				cc->length_acc = 0;
+				break;
+			}
+			case 0xa4: //Erase FLASH Block
+			{
+				int addy = (((cc->acc_value & 0x0f)<<16) | cc->acc_index)*4;
+				cc->ret = usb_custom_ret;
+				SPIEraseBlock( cc->acc_value );
+				cc->length_ret = 1;
+				cc->length_acc = 0;
+				break;
+			}
 
-		PIN_OUT_SET = _BV(2); //Turn GPIO2 light off.
-		ets_delay_us( 10000 );
-		PIN_OUT_CLEAR = _BV(2); //Turn GPIO2 light off.
-		ets_delay_us( 10000 );
 
+
+			}
+
+
+		}
+
+		//Don't know why.  Without this, it breaks.
+		ets_delay_us( 1 );
 		i++;
+		if( i == 400000 && !usb_internal_state.there_is_a_host )
+		{
+			printf( "No host (Should do normal boot)\n" );
+		}
 	}
 }
 

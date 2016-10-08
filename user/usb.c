@@ -221,6 +221,8 @@ void usb_pid_handle_ack( uint32_t this_token, struct usb_internal_state_struct *
 	if( e->place_in == e->size_in )
 	{
 		e->send = 0;
+		if( e->transfer_in_done_ptr ) (*e->transfer_in_done_ptr) = 1;
+		e->transfer_in_done_ptr = 0;
 	}
 }
 
