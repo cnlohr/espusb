@@ -24,10 +24,10 @@ int main()
 
 	while(1)
 	{
-		char buffer[1024];
+		char buffer[2100];
 
 		strcpy( buffer, "U" );
-		int len = 1024;
+		int len = 2090;
 
 		r1 = libusb_control_transfer( devh,
 			0x00,    //reqtype  (0x80 = Device->PC, 0x00 = PC->Device)

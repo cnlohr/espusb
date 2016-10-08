@@ -7,13 +7,15 @@
 #include <usb.h>
 
 //Awkward example with use of control messages to get data to/from device.
-uint8_t user_control[1100]; //Enough for FW######## ### [128 bytes of data] [null]
+uint8_t user_control_acc[2100];
+uint8_t user_control_ret[2100];
 int     user_control_length_acc = 0; //From host to us.
 int     user_control_length_ret = 0; //From us to host.
 int hit = 0;
 
 void usb_handle_custom_control( int bmRequestType, int bRequest, int wLength, struct usb_internal_state_struct * ist )
 {
+	struct usb_urb * s = (struct usb_urb *)ist->usb_buffer;
 	struct usb_endpoint * e = ist->ce;
 
 	if( bmRequestType == 0x80 )
@@ -22,7 +24,7 @@ void usb_handle_custom_control( int bmRequestType, int bRequest, int wLength, st
 		{
 			if( user_control_length_ret )
 			{
-				e->ptr_in = user_control;
+				e->ptr_in = user_control_ret;
 				e->size_in = user_control_length_ret;
 				if( wLength < e->size_in ) e->size_in = wLength;
 				hit = e->size_in;
@@ -35,8 +37,8 @@ void usb_handle_custom_control( int bmRequestType, int bRequest, int wLength, st
 	{
 		if( bRequest == 0xa6 && user_control_length_acc == 0 ) //HOST TO US "out"
 		{
-			e->ptr_out = user_control;
-			e->max_size_out = sizeof( user_control );
+			e->ptr_out = user_control_acc;
+			e->max_size_out = sizeof( user_control_acc );
 			if( e->max_size_out > wLength ) e->max_size_out = wLength;
 			e->got_size_out = 0;
 			e->transfer_done_ptr = &user_control_length_acc;
@@ -68,13 +70,13 @@ int main()
 		//You can return data by putting it in user_control and setting user_control_length_ret
 		//To determine if you are connected, check usb_internal_state.there_is_a_host
 
-		user_control[1] = 0;
-		printf( "/%d(%d) MSG:%s There_Is_Host: %d\n", user_control_length_acc, hit, user_control, usb_internal_state.there_is_a_host );
+		user_control_acc[1] = 0;
+		printf( "/%d(%d) MSG:%s There_Is_Host: %d\n", user_control_length_acc, hit, user_control_acc, usb_internal_state.there_is_a_host );
 		user_control_length_acc = 0; //Clear out the incoming data since we just got it.
 
 		//Write some stuff into the outgoing data.
-		user_control[0] = 'K';
-		user_control_length_ret = 1024;
+		user_control_ret[0] = 'K';
+//		user_control_length_ret = 2080;
 
 		PIN_OUT_SET = _BV(2); //Turn GPIO2 light off.
 		ets_delay_us( 10000 );
