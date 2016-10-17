@@ -7,7 +7,6 @@
 #include "uart.h"
 #include "osapi.h"
 #include "espconn.h"
-#include "ws2812_i2s.h"
 #include "commonservices.h"
 #include <mdns.h>
 #include <esp82xxutil.h>
@@ -21,8 +20,6 @@
 #define procTaskQueueLen    1
 
 static volatile os_timer_t some_timer;
-uint8_t last_leds[512*3];
-int last_led_count;
 
 
 //int ICACHE_FLASH_ATTR StartMDNS();
