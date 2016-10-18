@@ -1,6 +1,6 @@
 #ESP8266 USB Software Driver
 
-WARNING: THIS PROJECT IS A WORK IN PROGRESS.  DO NOT EXPECT IT TO WORK WELL.
+This project only works with USB Low Speed.  Additionally, you cannot use SDKs newere than 1.5.4.  All ESP SDK 2.0 SDKs are incompatible.
 
 Forum for discussion of development: http://www.esp8266.com/espusb
 
