@@ -1,20 +1,66 @@
-#ESP8266 USB Software Driver
-
-This project only works with USB Low Speed.  Additionally, you cannot use SDKs newere than 1.5.4.  All ESP SDK 2.0 SDKs are incompatible.
-
-Forum for discussion of development: http://www.esp8266.com/espusb
+# ESP8266 USB Software Driver
 
 I wanted to have USB on the ESP8266, and a while ago I saw on the ESP32 flier, it read: "Rich Peripherals" ... "Sorry, no USB!" I thought to myself, that is ridiculous.  Of course there's USB.
 
 So, it was born.  This is a software USB stack running on the ESP8266/ESP8285.  It requires only one external resistor, between D- and 3.3V.
 
-Currently, the chip expects D- on GPIO 4 and D+ on GPIO 5 - but any GPIO pair may be used.  It is important to note that both D- and D+ MUST be adjacent.
+## Limitations
 
-Additionally, this only operates with low-speed USB (1.5 MBit/s), ideal for making peripherals, not for fake networkand devices usb-serial bridges.  That said - you can still write "control" messages that communicate with the ESP8266.  Control messages are a great way to encapsulate your data since they handle all the framing and describing what function you wish to pass data for.
+- You cannot use SDKs newer than 1.5.X. (As of dec-02-2016, 1.5.4 is the latest SDK that has been verified to be compatible.)
+- All ESP SDK 2.0 SDKs are incompatible.
+- By default, the chip expects D- on GPIO 4 and D+ on GPIO 5 - but any GPIO pair may be used.  It is important to note that both D- and D+ MUST be adjacent.
+- This project only operates with low-speed USB (1.5 MBit/s)
+  ideal for making peripherals, not for fake network devices and usb-serial bridges.  
+  That said - you can still write "control" messages that communicate with the ESP8266.  
+  Control messages are a great way to encapsulate your data since they handle all the framing and describing what function you wish to pass data for.
 
-More info hopefully coming soon.
+## Resources
+- [Getting started guide](https://github.com/cnlohr/espusb/wiki/Getting-Started-Guide)
+- [Forum for discussion of development](http://www.esp8266.com/espusb)
 
-## Hardware
+
+## Examples
+
+This project contains an example that simulates a usb keyboard and mouse. It also provides a web interface to actually remote control these virtual devices.
+
+## How to use
+For a complete guide that includes information on how to install the toolchain or set up a docker container, go here: [Getting started guide](https://github.com/cnlohr/espusb/wiki/Getting-Started-Guide)
+If you already have an environment with the toolchain, then here is what you wanna do:
+
+### Software
+
+- Install libusb and recursively clone this repo: 
+  
+  ``` bash
+  sudo apt-get install libusb-1.0-0-dev
+  git clone --recursive https://github.com/cnlohr/espusb
+  cd espusb
+  ```
+
+- `user.cfg` contains some settings that you might have to change to get it working. 
+
+- Building/flashing the main binary
+  
+  ``` bash
+  make ESP_ROOT=~/esp8266/esp-open-sdk/ burn
+  ```
+
+- Building/flashing the web interface (for the example mentioned above)
+  
+  ``` bash
+  make ESP_ROOT=~/esp8266/esp-open-sdk/ burnweb
+  ```
+
+For more advanced building/flashing methods just run `make` without any parameters.
+
+### Hardware
+
+![basic-schematic](basic-schematic.png)
+
+
+## Advanced information
+
+### Hardware
 
 ![Schematic](schematic.png)
 
@@ -22,7 +68,7 @@ NOTE: GPIO12/14 do not need to be connected to ground. GPIO15 may be connected v
 
 Also, checkout the hardware/ folder.  It has kicad designs for my tiny board.  Though they are for the ESP8285, the same pin configuration may be used to run on the ESP8266.
 
-## Memory Usage
+### Memory Usage
 
 This is typical memory usage for a two-endpoint (in addition to EP0) device.
 
