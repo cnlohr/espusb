@@ -4,15 +4,10 @@ This particular file may be licensed under the MIT/x11, New BSD or ColorChord Li
 <head>
 <title>esp8266 USB controller</title>
 <script language="javascript" type="text/javascript" src=jquery-2.1.4.min.js.gz></script>
-<script language="javascript" type="text/javascript" src=bootstrap-3.3.7.min.js.gz></script>
 <script language="javascript" type="text/javascript" src=menuinterface.js></script>
 <script language="javascript" type="text/javascript" src=main.js></script>
-
-<link rel="stylesheet" href="bootstrap.min.css">
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.15, maximum-scale=1.15, user-scalable=no">
-
 <style>
 table { width: 100%; }
 td { vertical-align: top; }
@@ -23,220 +18,12 @@ td { vertical-align: top; }
 .unsaved-input { border: 2px solid pink; border-radius: 7px; }
 #MouseCap { border-radius: 25px; background: green; padding: 20px; width: 100%; height: 200px; }
 .regbtn { border-radius: 5px; background: red; padding: 10px; width: 70px; height: 70px; }
-
-body {
-    padding: 20px;
-}
-
 </style>
 </head>
 <body>
+<h2>esp8266 ESPUSB controller</h2>
+<hr>
 
-<div class="content">
-    <div class="panel-group" id="accordion">
-
-        <div class="panel panel-danger">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">System Offline</a>
-                </h4>
-            </div>
-            <div id="collapseOne" class="panel-collapse collapse">
-                <div class="panel-body">
-                    <div class="input-group">
-                        <label>Connecting...</label>
-                    </div>
-                    <label>System Name:</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control">
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" type="button">Change</button>
-                        </span>
-                    </div>
-
-                    <br><label>System Description: </label>
-                    <div class="input-group">
-                        <input type="text" class="form-control">
-                        <span class="input-group-btn">
-                            <button class="btn btn-default" type="button">Change</button>
-                        </span>
-                    </div><br>
-                    <div class="input-group">
-                        <label>Service Name:</label>
-                    </div><br>
-                    <div class="input-group">
-                        <label>Free Heap:</label>
-                    </div><br>
-                    <div class="input-group">
-                        <button class="btn btn-default" type="button">Reset To Current</button>
-                        <button class="btn btn-default" type="button">Save</button>
-                        <button class="btn btn-default" type="button">Revert From Saved</button>
-                        <button class="btn btn-default" type="button">Revert To Factory</button>
-                        <button class="btn btn-default" type="button">Reboot</button>
-                    </div><br>
-                    <div class="input-group">
-                        <label>Search for others:</label>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseTwo">Introduction</a>
-                </h4>
-            </div>
-            <div id="collapseTwo" class="panel-collapse collapse">
-                <div class="panel-body">
-                    <p>Welcome to the espusb Web-based GUI.</p>
-                    <p>This GUI uses WebSockets, and has only been tested under the newest (as of August, 2016) Chrome and Firefox browsers.</p>
-                    <p>For more information about this project, visit it on github, here: <a href=https://github.com/cnlohr/espusb>https://github.com/cnlohr/espusb</a></p>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree">HID</a>
-                </h4>
-            </div>
-            <div id="collapseThree" class="panel-collapse collapse">
-                <div class="panel-body">
-                    TODO: Add mouse stuff
-                    <div>
-                        <button type="button" class="btn btn-default">Esc</button>
-                        <button type="button" class="btn btn-default">F1</button>
-                        <button type="button" class="btn btn-default">F2</button>
-                        <button type="button" class="btn btn-default">F3</button>
-                        <button type="button" class="btn btn-default">F4</button>
-                        <button type="button" class="btn btn-default">F5</button>
-                        <button type="button" class="btn btn-default">F6</button>
-                        <button type="button" class="btn btn-default">F7</button>
-                        <button type="button" class="btn btn-default">F8</button>
-                        <button type="button" class="btn btn-default">F9</button>
-                        <button type="button" class="btn btn-default">F10</button>
-                        <button type="button" class="btn btn-default">F11</button>
-                        <button type="button" class="btn btn-default">F12</button>
-                        <button type="button" class="btn btn-default">Prnt</button>
-                        <button type="button" class="btn btn-default">Pause</button>
-                        <button type="button" class="btn btn-default">Delete</button>
-                        <button type="button" class="btn btn-default">PgUp</button>
-                        <button type="button" class="btn btn-default">PgDn</button>
-                        <button type="button" class="btn btn-default">Home</button>
-                        <button type="button" class="btn btn-default">End</button>
-                        <button type="button" class="btn btn-default">Enter</button>
-                        <button type="button" class="btn btn-default">Vol Up</button>
-                        <button type="button" class="btn btn-default">Vol Dn</button>
-                        <button type="button" class="btn btn-default">></button>
-                        <button type="button" class="btn btn-default"><</button>
-                        <button type="button" class="btn btn-default">^</button>
-                        <button type="button" class="btn btn-default">v</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseFour">Wifi Settings</a>
-                </h4>
-            </div>
-            <div id="collapseFour" class="panel-collapse collapse in">
-                <div class="panel-body">
-                    <form action="javascript:ChangeWifiConfig();">
-                        <div class="form-group">
-                            <label>Type</label>
-                            <div class="radio"><label><input type="radio" name="wifitype">Station (Connect to infrastructure)</label></div>
-                            <div class="radio"><label><input type="radio" name="wifitype">AP (Broadcast a new AP)</label></div>
-                        </div>
-                        <div class="form-group">
-                            <label>SSID</label>
-                            <input name="ssid" type="text" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>Password</label>
-                            <input name="pass" type="text" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>MAC address</label>
-                            <input name="mac" type="text" class="form-control">
-                            <label>(Ignored in softAP mode)</label>
-                        </div>
-                        <div class="form-group">
-                            <label>Channel</label>
-                            <input name="chan" type="text" class="form-control">
-                            <label>(Ignored in Station mode)</label>
-                        </div>
-                        <div class="form-group">
-                          <button type="submit" class="btn btn-primary">Change Settings</button>
-                        </div>
-                        <div class="form-group">
-                            <label> Scanned Stations:</label><br>
-                            <button type="submit" class="btn btn-primary">Scan For Stations (Will disconnect!)</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseFive">Custom Command</a>
-                </h4>
-            </div>
-            <div id="collapseFive" class="panel-collapse collapse">
-                <div class="panel-body">
-                    <form action="javascript:ChangeWifiConfig();">
-                        <div class="form-group">
-                            <label>Command</label>
-                            <input name="cmd" type="text" class="form-control" onclick="IssueCustomCommand()">
-                        </div>
-                        <div class="form-group">
-                            <textarea name="custom_command_response" id="custom_command_response" class="form-control" rows="15" readonly></textarea>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseSix">GPIOs</a>
-                </h4>
-            </div>
-            <div id="collapseSix" class="panel-collapse collapse">
-                <div class="panel-body">
-                    TODO: Find out what this is even suppoosed to do
-                </div>
-            </div>
-        </div>
-
-        <div class="panel panel-primary">
-            <div class="panel-heading">
-                <h4 class="panel-title">
-                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseSeven">System Reflash</a>
-                </h4>
-            </div>
-            <div id="collapseSeven" class="panel-collapse collapse">
-                <div class="panel-body">
-                    <div class="form-group">
-                        <label>File input</label>
-                        <input type="file">
-                        <p class="help-block">Drop or browse for system (0x000.. 0x400...) or web (.mpfs) reflash files.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-</div>
-
-<!--
 <table id="MainMenu">
 
 <tbody>
@@ -299,17 +86,19 @@ body {
 </td>
 </tr>
 
-<!-<td id=LEDCanvasHolder><CANVAS id=LEDCanvas width=512 height=100></CANVAS></td>
+<!--<td id=LEDCanvasHolder><CANVAS id=LEDCanvas width=512 height=100></CANVAS></td>
 <td><input type=button onclick="ToggleLEDPause();" id=LEDPauseButton value="|| / >">
 </div>
-->
+-->
 
 
 </tbody>
 
 </table>
--->
+
 <p><font size=-2>Copyright (C) 2015-2016 &lt&gt&lt Charles Lohr, See LICENSE file for more info.</font></p>
 <div id=SystemMessage>...</div>
 </body>
 </html>
+
+
