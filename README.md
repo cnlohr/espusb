@@ -57,16 +57,6 @@ For more advanced building/flashing methods just run `make` without any paramete
 
 ![basic-schematic](basic-schematic.png)
 
-### Wemos D1 Mini
-
-The Wemos D1 mini is a breadboard friendly ESP board.
-
-You can easily flash espusb through its first USB-serial connexion, and then
-wire the 5V, D1, D2 pins to the USB following the wiring instructions. Here is
-a picture of a setup with 2 breadboards (although it should be feasible with
-one mini breadboard):
-
-![EspUSB on the Wemos D1 Mini](espusb-wemos-d1-mini.jpg)
 
 ## Advanced information
 
