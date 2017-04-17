@@ -163,7 +163,10 @@ looper:
 	_l32i.n a6, a11, GPIO_OFFSET_INPUT           //Read pins in.
 	DEBUG_LOW
 	_and a5, a5, a4
-	_extui a6, a6, DMINUSBASE, 2	//Extract two bits.
+	_extui a0, a6, DMINUS, 1	//Extract two bits.
+	_extui a6, a6, DPLUS, 1
+	slli a6, a6, 1
+	_or a5, a5, a0
 	_or a5, a5, a6
 	_add a6, a14, a5				//Offset the table
 	_l8ui a5, a6, TABLE_OFFSET		//Read the data back
@@ -338,20 +341,20 @@ usb_send_data:            //A2 = pointer to data  //A3 = length of data,, A4  = 
 	movi       a14, usb_ramtable	//This is actually very slow.
 	_l32i.n    a11, a14, GPIO_BASE_OFFSET
 
-	movi a0, ~(3<<DMINUSBASE)
+	movi a0, ~(1<<DMINUS | 1<<DPLUS)
 	_l32i.n a5, a11, GPIO_OFFSET_OUT
 	and a0, a5, a0
 
-	movi a8, (2<<DMINUSBASE)		//WARNING: If flipping D- and D+ this must be updated.
+	movi a8, (1<<DPLUS)
 	or a8, a0, a8
-	movi a9, (1<<DMINUSBASE)
+	movi a9, (1<<DMINUS)
 	or a9, a0, a9	
 
 	_s32i.n a9, a11, GPIO_OFFSET_OUT
 
 	rsr a15, ccount
 
-	movi a0, (3<<DMINUSBASE)  //TODO: Pull these from the table.
+	movi a0, (1<<DMINUS | 1<<DPLUS)  //TODO: Pull these from the table.
 	_s32i.n    a0, a11, GPIO_OFFSET_DIR_OUT //Set pins to output.
 
 	movi a7, 0
@@ -477,7 +480,7 @@ actually_done:
 	done_bit_stuff:
 
 	//Go low/low for two cycles.
-	movi a0, (3<<DMINUSBASE)
+	movi a0, (1<<DMINUS | 1<<DPLUS)
 	_s32i.n    a0, a11, GPIO_OFFSET_CLEAR //Set pins to output.
 
 	addi a15, a15, 53 //Wait an extra cycle, so our SE0 will be two bits.
@@ -493,7 +496,7 @@ emit_data_bit_for_starting_end_final_final:
 	bbsi a0, 31, emit_data_bit_for_starting_end_final_final
 DEBUG_HIGH
 
-	movi a0, (3<<DMINUSBASE)
+	movi a0, (1<<DMINUS | 1<<DPLUS)
 	_s32i.n    a0, a11, GPIO_OFFSET_DIR_IN //Set pins to output.
 
 	//56 = Temporary buffer for holding CRC
