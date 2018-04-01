@@ -18,6 +18,9 @@ So, it was born.  This is a software USB stack running on the ESP8266/ESP8285.  
 - [Getting started guide](https://github.com/cnlohr/espusb/wiki/Getting-Started-Guide)
 - [Forum for discussion of development](http://www.esp8266.com/espusb)
 
+## Pre-built binaries
+
+See bottom of this thread: https://github.com/cnlohr/espusb/issues/40#issuecomment-377770936
 
 ## Examples
 
